@@ -64,6 +64,13 @@
   </tr>
 </table>
 
+## 📸 Screenshot
+
+<div align="center">
+  <img src="assets/screenshot.png" alt="MultiFlash Tool Screenshot" width="800"/>
+  <p><i>MultiFlash Tool Main Interface</i></p>
+</div>
+
 ## ⚠️ License Notice
 
 This project is licensed under **CC BY-NC-SA 4.0** (Creative Commons Attribution-NonCommercial-ShareAlike 4.0). **Any form of commercial use is prohibited.**

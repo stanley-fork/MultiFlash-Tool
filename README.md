@@ -64,6 +64,13 @@
   </tr>
 </table>
 
+## 📸 界面预览
+
+<div align="center">
+  <img src="assets/screenshot.png" alt="MultiFlash Tool 界面截图" width="800"/>
+  <p><i>MultiFlash Tool 主界面</i></p>
+</div>
+
 ## ⚠️ 许可声明
 
 本项目采用 **非商业许可**，**禁止任何形式的商业用途**。
