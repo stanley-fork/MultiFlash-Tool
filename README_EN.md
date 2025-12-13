@@ -256,7 +256,7 @@ If this project helps you, please give it a Star ⭐
 
 ### Follow Us
 - **GitHub**: [Star this project](https://github.com/xiriovo/MultiFlash-Tool)
-- **Gitee Mirror**: [China Mirror](https://gitee.com/xiriovo/MultiFlash-Tool) <!-- Uncomment if mirror exists -->
+- **Gitee Mirror**: [China Mirror](https://gitee.com/xiriery778/MultiFlash-Tool) <!-- Uncomment if mirror exists -->
 
 > 💡 **Tip**: Please check [FAQ](#faq) and [existing Issues](../../issues) before asking questions
 

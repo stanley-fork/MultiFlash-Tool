@@ -28,7 +28,7 @@
 - **知乎**: `待添加` <!-- 如有 -->
 
 ### 代码托管镜像
-- **Gitee 镜像**: `待添加` <!-- 格式: https://gitee.com/xiriovo/MultiFlash-Tool -->
+- **Gitee 镜像**: https://gitee.com/xiriery778/MultiFlash-Tool
 - **GitLab**: `待添加` <!-- 如有 -->
 
 ### 开发者信息
@@ -53,6 +53,9 @@
 - [ ] 项目主页（如有）
 
 ## 🔄 更新记录
+
+### 2024-12-13 16:22
+- 更新 Gitee 镜像链接：https://gitee.com/xiriery778/MultiFlash-Tool
 
 ### 2024-12-13 16:08
 - 添加 Telegram 频道：https://t.me/OPFlashTool

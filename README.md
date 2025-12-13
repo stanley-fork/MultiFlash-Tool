@@ -256,7 +256,7 @@
 
 ### 关注我们
 - **GitHub**: [Star 本项目](https://github.com/xiriovo/MultiFlash-Tool)
-- **Gitee 镜像**: [国内镜像](https://gitee.com/xiriovo/MultiFlash-Tool) <!-- 如有镜像请取消注释 -->
+- **Gitee 镜像**: [国内镜像](https://gitee.com/xiriery778/MultiFlash-Tool) <!-- 如有镜像请取消注释 -->
 
 > 💡 **提示**: 提问前请先查看 [常见问题](#常见问题) 和 [已有 Issues](../../issues)
 
