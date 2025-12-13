@@ -58,3 +58,7 @@ config.local.json
 # Dependencies output
 C:\MultiFlashTool\
 C:\MultiFlashTool_log\
+
+# IDE specific files
+.windsurfrules
+.ask_continue_port
