@@ -111,7 +111,6 @@ This project is licensed under **CC BY-NC-SA 4.0** (Creative Commons Attribution
 
 ### Advanced Features
 
-- 🔐 **Security Authentication** - Cloud authorization verification
 - 📝 **Detailed Logging** - Operation log recording and export
 - 🌐 **Multi-language Support** - Chinese & English interface
 - 🎨 **Modern UI** - Based on AntdUI framework
