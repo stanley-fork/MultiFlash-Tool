@@ -32,16 +32,13 @@ https://gitee.com/xiriery778/MultiFlash-Tool
 
 ## 🏷️ Topics (项目标签)
 
-添加标签可以让其他人更容易发现您的项目。请复制以下标签添加到 Topics 区域：
+添加标签可以让其他人更容易发现您的项目。请**直接复制以下整行内容**，粘贴到 GitHub 的 Topics 输入框中，然后按回车：
 
-### 通用标签
-`android` `flashing-tool` `firmware-tool` `unbrick` `open-source` `windows`
+```text
+android flashing-tool qualcomm edl-mode fastboot csharp dotnet unbrick firmware-tool winforms open-source 9008 adb payload-dumper partition-manager
+```
 
-### 技术标签
-`csharp` `dotnet` `winforms`
-
-### 功能标签
-`qualcomm` `edl-mode` `9008` `fastboot` `adb` `payload-dumper` `partition-manager`
+(注意：标签必须全部小写，不能包含空格以外的符号)
 
 ## ⚙️ 如何设置
 
