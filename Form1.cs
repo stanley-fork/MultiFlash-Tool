@@ -633,6 +633,7 @@ namespace OPFlashTool
                 移除FrpToolStripMenuItem.Click += async (s, e) => await RunEdlEraseAsync("frp");
                 
                 select1.TextChanged += Select1_TextChanged;
+                // SelectedIndexChanged 已在 Designer.cs 中绑定
                 InitializeAdvancedEdlMenu();
             }
             catch (Exception ex)
@@ -4673,38 +4674,41 @@ namespace OPFlashTool
         private void SearchAndShowPartitions()
         {
             if (_isOperationInProgress) return;
-            if (listView1.Items.Count == 0) return;
+            if (listView1.Items.Count == 0) 
+            {
+                AppendLog("请先读取分区表", Color.Orange);
+                return;
+            }
 
             string searchText = select1.Text?.Trim() ?? string.Empty;
 
             // 如果搜索文本为空，清空下拉列表
             if (string.IsNullOrEmpty(searchText))
             {
-                select1.Items?.Clear();
+                if (select1.Items != null) select1.Items.Clear();
                 return;
             }
 
             // 搜索匹配的分区（针对分区名称列，不区分大小写）
             var matchedItems = listView1.Items.Cast<ListViewItem>()
                 .Select(item => item.Text)
-                .Where(name => name.IndexOf(searchText, StringComparison.OrdinalIgnoreCase) >= 0)
+                .Where(name => !string.IsNullOrEmpty(name) && name.IndexOf(searchText, StringComparison.OrdinalIgnoreCase) >= 0)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
+                .ToArray();
 
             // 更新select1的下拉选项
-            select1.Items?.Clear();
-            if (matchedItems.Count > 0)
+            if (select1.Items != null)
             {
-                foreach (string partitionName in matchedItems)
+                select1.Items.Clear();
+                if (matchedItems.Length > 0)
                 {
-                    select1.Items.Add(partitionName);
+                    select1.Items.AddRange(matchedItems.Cast<object>().ToArray());
+                    AppendLog($"找到 {matchedItems.Length} 个匹配的分区", Color.DarkBlue);
                 }
-
-                AppendLog($"找到 {matchedItems.Count} 个匹配的分区", Color.DarkBlue);
-            }
-            else
-            {
-                AppendLog($"未找到包含 '{searchText}' 的分区", Color.Orange);
+                else
+                {
+                    AppendLog($"未找到包含 '{searchText}' 的分区", Color.Orange);
+                }
             }
         }
 
