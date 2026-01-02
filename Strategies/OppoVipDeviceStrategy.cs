@@ -8,18 +8,148 @@ using OPFlashTool.Qualcomm;
 
 namespace OPFlashTool.Strategies
 {
+    /// <summary>
+    /// OPPO/Realme VIP 设备策略
+    /// 基于 OP_Flash_Tool_1.3 优化，支持自动检测读写模式
+    /// </summary>
     public class OppoVipDeviceStrategy : StandardDeviceStrategy
     {
         public override string Name => "Oppo/Realme VIP";
 
+        #region RW Mode Detection (基于 OP_Flash_Tool test_rw_mode.bat)
+
+        /// <summary>
+        /// OPPO 特殊读写模式
+        /// </summary>
+        public enum OplusRwMode
+        {
+            Unknown,         // 未检测
+            Normal,          // 普通模式 (无伪装)
+            GptBackup,       // oplus_gptbackup 模式
+            GptMain_Mode1,   // oplus_gptmain 模式 1 (Gap 在 sector 6)
+            GptMain_Mode2    // oplus_gptmain 模式 2 (Gap 在 sector 34)
+        }
+
+        // 当前检测到的读写模式
+        private OplusRwMode _currentRwMode = OplusRwMode.Unknown;
+        
+        // Gap 扇区位置 (根据模式自动设置)
+        private long _gapSector = 6; // UFS 默认
+
         // 缓存每个 LUN 的第一个分区名称 (用于 gptmain 方案的分段伪装)
         private Dictionary<int, string> _lunFirstPartitions = new Dictionary<int, string>();
 
-        // [已移除] 不再包含硬编码的 Token 和 PK
-        // private const string OPPO_PK = "...";
-        // private const string OPPO_TOKEN = "...";
+        /// <summary>
+        /// 自动检测 OPPO 特殊读写模式
+        /// 参考 OP_Flash_Tool_1.3 的 test_rw_mode.bat
+        /// </summary>
+        private async Task<OplusRwMode> DetectRwModeAsync(FirehoseClient client, Action<string> log, CancellationToken ct)
+        {
+            log("[Oppo] 正在检测特殊读写模式...");
 
-        public override Task<bool> AuthenticateAsync(FirehoseClient client, string programmerPath, Action<string> log, Func<string, string> inputCallback = null, string digestPath = null, string signaturePath = null)
+            int sectorSize = client.SectorSize;
+            string tempPath = Path.Combine(Path.GetTempPath(), "oppo_rwmode_test.bin");
+
+            try
+            {
+                // === 测试 1: oplus_gptbackup 模式 (sector 5-35) ===
+                log("[Test] 测试 gptbackup 模式 (sector 5-35)...");
+                bool gptbackupSuccess = await TestReadSectorRange(client, 5, 31, "gpt_backup0.bin", "BackupGPT", tempPath, ct);
+                
+                if (gptbackupSuccess)
+                {
+                    log("[Oppo] 检测结果: oplus_gptbackup 模式");
+                    _gapSector = -1; // gptbackup 模式无 Gap
+                    return OplusRwMode.GptBackup;
+                }
+
+                // === 测试 2: oplus_gptmain 模式 ===
+                log("[Test] 测试 gptmain 模式...");
+
+                // 测试 sector 33-35 (快速判断 mode1 vs mode2)
+                bool sector33_35Success = await TestReadSectorRange(client, 33, 3, "gpt_main0.bin", "gpt_main0.bin", tempPath, ct);
+                
+                if (sector33_35Success)
+                {
+                    // 能读 33-35，说明 Gap 在 sector 6 (mode1)
+                    log("[Oppo] 检测结果: oplus_gptmain 模式 1 (Gap @ sector 6)");
+                    _gapSector = 6;
+                    return OplusRwMode.GptMain_Mode1;
+                }
+                else
+                {
+                    // 不能读 33-35，可能 Gap 在 sector 34 (mode2)
+                    // 验证: 测试 sector 35+ 是否可读
+                    bool sector35Success = await TestReadSectorRange(client, 35, 10, "gpt_main0.bin", "gpt_main0.bin", tempPath, ct);
+                    
+                    if (sector35Success)
+                    {
+                        log("[Oppo] 检测结果: oplus_gptmain 模式 2 (Gap @ sector 34)");
+                        _gapSector = 34;
+                        return OplusRwMode.GptMain_Mode2;
+                    }
+                }
+
+                // === 测试 3: 普通模式 ===
+                log("[Test] 测试普通模式...");
+                bool normalSuccess = await TestReadSectorRange(client, 0, 6, "gpt_main0.bin", "PrimaryGPT", tempPath, ct);
+                
+                if (normalSuccess)
+                {
+                    log("[Oppo] 检测结果: 普通模式 (无特殊限制)");
+                    _gapSector = -1;
+                    return OplusRwMode.Normal;
+                }
+
+                log("[Oppo] 检测结果: 未知模式，将使用瀑布流策略");
+                return OplusRwMode.Unknown;
+            }
+            catch (Exception ex)
+            {
+                log($"[Oppo] 模式检测异常: {ex.Message}");
+                return OplusRwMode.Unknown;
+            }
+            finally
+            {
+                // 清理临时文件
+                try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { }
+            }
+        }
+
+        /// <summary>
+        /// 测试读取指定扇区范围
+        /// </summary>
+        private async Task<bool> TestReadSectorRange(FirehoseClient client, long startSector, long numSectors, 
+            string filename, string label, string savePath, CancellationToken ct)
+        {
+            try
+            {
+                // 使用分块读取，suppressError=true 避免错误日志
+                return await client.ReadPartitionChunkedAsync(
+                    savePath,
+                    startSector.ToString(),
+                    numSectors,
+                    "0", // LUN 0
+                    null, // 无进度回调
+                    ct,
+                    label,
+                    filename,
+                    append: false,
+                    suppressError: true
+                );
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        #endregion
+
+        #region Authentication
+
+        public override Task<bool> AuthenticateAsync(FirehoseClient client, string programmerPath, Action<string> log, 
+            Func<string, string> inputCallback = null, string digestPath = null, string signaturePath = null)
         {
             log("[Oppo] 准备执行 VIP 签名验证...");
             string finalDigest = digestPath;
@@ -29,433 +159,585 @@ namespace OPFlashTool.Strategies
             if (string.IsNullOrEmpty(finalDigest))
             {
                 string dir = Path.GetDirectoryName(programmerPath);
-                string t = Path.Combine(dir, "digest.bin");
-                if (!File.Exists(t)) t = Path.Combine(dir, "digest.mbn");
-                if (File.Exists(t)) finalDigest = t;
+                string[] digestNames = { "digest.bin", "digest.mbn", "Digest.bin", "Digest.mbn" };
+                foreach (var name in digestNames)
+                {
+                    string t = Path.Combine(dir, name);
+                    if (File.Exists(t)) { finalDigest = t; break; }
+                }
             }
 
             if (string.IsNullOrEmpty(finalSig))
             {
                 string dir = Path.GetDirectoryName(programmerPath);
-                string t = Path.Combine(dir, "signature.bin");
-                if (!File.Exists(t)) t = Path.Combine(dir, "signature.mbn");
-                if (File.Exists(t)) finalSig = t;
+                string[] sigNames = { "signature.bin", "signature.mbn", "Signature.bin", "Signature.mbn", "sig.bin", "sig.mbn" };
+                foreach (var name in sigNames)
+                {
+                    string t = Path.Combine(dir, name);
+                    if (File.Exists(t)) { finalSig = t; break; }
+                }
             }
 
             // 2. 检查文件
             if (string.IsNullOrEmpty(finalDigest) || !File.Exists(finalDigest) ||
                 string.IsNullOrEmpty(finalSig) || !File.Exists(finalSig))
             {
-                log($"[Oppo] 警告: 未找到 VIP 验证文件 (Digest/Signature)！\n请手动选择文件或将其放入引导目录。");
-                // 如果没有文件，通常无法通过验证。
-                // 但为了不卡死流程，我们允许返回 true 尝试后续步骤（设备可能会报错）。
-                return Task.FromResult(true);
+                log($"[Oppo] 警告: 未找到 VIP 验证文件 (Digest/Signature)！");
+                log($"[Oppo] 请手动选择文件或将其放入引导目录。");
+                return Task.FromResult(true); // 允许继续尝试
             }
+
+            log($"[Oppo] Digest: {Path.GetFileName(finalDigest)}");
+            log($"[Oppo] Signature: {Path.GetFileName(finalSig)}");
 
             // 3. 执行验证
             return Task.FromResult(client.PerformVipAuth(finalDigest, finalSig));
         }
 
-        // [核心逻辑] OPPO 专用的伪装读取策略 (参考项目完整 Waterfall Strategy)
-        // 参考项目 VIP 模式使用多重伪装策略，按顺序尝试直到成功
+        #endregion
+
+        #region GPT Reading
+
         public override async Task<List<PartitionInfo>> ReadGptAsync(FirehoseClient client, CancellationToken ct, Action<string> log)
         {
+            // 首先检测读写模式
+            if (_currentRwMode == OplusRwMode.Unknown)
+            {
+                _currentRwMode = await DetectRwModeAsync(client, log, ct);
+            }
+
             var allPartitions = new List<PartitionInfo>();
-            _lunFirstPartitions.Clear(); // 清空缓存
-            
-            // 参考项目: 固定扫描 LUN 0-5, 固定读取 6 扇区
+            _lunFirstPartitions.Clear();
+
             const int maxLun = 5;
             const int sectorsToRead = 6;
             int lunRead = 0;
 
-            // 参考项目完整的伪装策略列表 (Waterfall Strategy)
-            var spoofStrategies = new (string label, string filename)[]
-            {
-                ("PrimaryGPT", "gpt_main{lun}.bin"),      // 策略 1: 主表
-                ("BackupGPT", "gpt_main{lun}.bin"),       // 策略 2: 备份标签+主表文件名
-                ("BackupGPT", "gpt_backup{lun}.bin"),     // 策略 3: 备份标签+备份文件名
-                ("gpt_backup0.bin", "gpt_backup0.bin"),   // 策略 4: 全伪装 (备份)
-                ("gpt_main0.bin", "gpt_main0.bin"),       // 策略 5: 全伪装 (主表)
-                ("ssd", "ssd"),                           // 策略 6: 通用伪装
-                ("super", "super"),                       // 策略 7: 超级伪装
-                ("userdata", "userdata"),                 // 策略 8: 用户数据伪装
-            };
+            // 根据检测到的模式选择策略
+            var spoofStrategies = GetGptSpoofStrategies();
 
-            log("[Info] 开始读取分区表 (Waterfall Strategy)...");
+            log($"[Info] 开始读取分区表 (模式: {_currentRwMode})...");
 
             for (int lun = 0; lun <= maxLun; lun++)
             {
                 if (ct.IsCancellationRequested) break;
 
-                byte[]? data = null;
+                byte[] data = null;
                 bool success = false;
 
-                // 遍历所有伪装策略
                 foreach (var (label, filenameTemplate) in spoofStrategies)
                 {
                     if (success) break;
-                    
-                    try 
+
+                    try
                     {
                         string filename = filenameTemplate.Replace("{lun}", lun.ToString());
-                        
+
                         data = await client.ReadGptPacketAsync(
-                            lun.ToString(), 
-                            0, 
-                            sectorsToRead, 
-                            label, 
-                            filename, 
+                            lun.ToString(),
+                            0,
+                            sectorsToRead,
+                            label,
+                            filename,
                             ct
                         );
 
-                        if (data != null && data.Length > 0)
+                        if (data != null && data.Length > 0 && IsValidGptData(data))
                         {
                             success = true;
-                            log($"[Debug] LUN{lun}: 策略 [{label}+{filename}] 成功");
+                            log($"[Debug] LUN{lun}: 策略 [{label}] 成功");
                             break;
                         }
                     }
                     catch { }
-                    
-                    // 策略失败，短暂等待后尝试下一个
-                    await Task.Delay(100);
+
+                    await Task.Delay(50);
                 }
 
                 if (success && data != null)
                 {
-                    // 解析 GPT 确认数据有效性
                     try
                     {
                         var parts = GptParser.ParseGptBytes(data, lun);
-                        
+
                         if (parts != null && parts.Count > 0)
                         {
                             allPartitions.AddRange(parts);
                             lunRead++;
                             log($"[Success] LUN{lun}: 读取到 {parts.Count} 个分区");
 
-                            // 缓存该 LUN 的第一个分区名称 (StartLba 最小的那个)
-                            var firstPart = System.Linq.Enumerable.OrderBy(parts, p => p.StartLba).FirstOrDefault();
+                            var firstPart = parts.OrderBy(p => p.StartLba).FirstOrDefault();
                             if (firstPart != null)
                             {
                                 _lunFirstPartitions[lun] = firstPart.Name;
                             }
                         }
-                        else
-                        {
-                            log($"[Info] LUN{lun}: 分区表为空或无效");
-                        }
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        log($"[Warn] LUN{lun}: 数据已获取但解析失败");
+                        log($"[Warn] LUN{lun}: 解析失败 - {ex.Message}");
                     }
                 }
                 else
                 {
-                    // 参考项目: 只有当 LUN0 失败时才报严重错误，其他 LUN 可能是空的
-                    if (lun == 0) log($"[Error] 无法读取 LUN0 分区表 (关键)");
+                    if (lun == 0) log($"[Error] 无法读取 LUN0 分区表");
                     else log($"[Info] LUN{lun} 无响应或不存在");
                 }
             }
 
             log($"[GPT] 共读取到 {lunRead} 个 LUN，解析出 {allPartitions.Count} 个分区");
-            
+
             if (allPartitions.Count == 0)
             {
-                log("[警告] VIP 模式无法读取分区表 (Firehose 拒绝所有读取请求)");
-                log("[提示] 您仍可使用 XML 刷写模式 (rawprogram*.xml) 进行刷机操作");
-                // 不再抛出异常，返回空列表允许用户使用 XML 模式
+                log("[警告] VIP 模式无法读取分区表");
+                log("[提示] 您可使用 XML 刷写模式 (rawprogram*.xml) 进行刷机操作");
             }
-            
+
             return allPartitions;
         }
 
-        private long ParseTotalSectors(string info)
+        /// <summary>
+        /// 根据检测到的模式获取 GPT 读取策略
+        /// </summary>
+        private (string label, string filename)[] GetGptSpoofStrategies()
         {
-            if (string.IsNullOrEmpty(info)) return 0;
-
-            // 1. 匹配 JSON 格式: "total_blocks":124186624
-            var matchJson = System.Text.RegularExpressions.Regex.Match(info, "\"total_blocks\"\\s*:\\s*(\\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-            if (matchJson.Success && long.TryParse(matchJson.Groups[1].Value, out long valJson))
+            switch (_currentRwMode)
             {
-                return valJson;
-            }
+                case OplusRwMode.GptBackup:
+                    return new[]
+                    {
+                        ("BackupGPT", "gpt_backup{lun}.bin"),
+                        ("gpt_backup0.bin", "gpt_backup0.bin"),
+                        ("PrimaryGPT", "gpt_main{lun}.bin"),
+                    };
 
-            // 2. 匹配文本格式: Device Total Logical Blocks: 0x766f000
-            var matchHex = System.Text.RegularExpressions.Regex.Match(info, @"Total\s+Logical\s+Blocks\s*:\s*0x([0-9a-fA-F]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-            if (matchHex.Success)
-            {
-                try 
-                {
-                    return Convert.ToInt64(matchHex.Groups[1].Value, 16);
-                }
-                catch {}
-            }
+                case OplusRwMode.GptMain_Mode1:
+                case OplusRwMode.GptMain_Mode2:
+                    return new[]
+                    {
+                        ("gpt_main0.bin", "gpt_main{lun}.bin"),
+                        ("PrimaryGPT", "gpt_main{lun}.bin"),
+                        ("gpt_main0.bin", "gpt_main0.bin"),
+                        ("BackupGPT", "gpt_backup{lun}.bin"),
+                    };
 
-            // 3. 匹配旧格式: num_partition_sectors: 123456
-            var matchOld = System.Text.RegularExpressions.Regex.Match(info, @"num_partition_sectors\s*[:=]\s*(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-            if (matchOld.Success && long.TryParse(matchOld.Groups[1].Value, out long valOld))
-            {
-                return valOld;
-            }
+                case OplusRwMode.Normal:
+                    return new[]
+                    {
+                        ("PrimaryGPT", "gpt_main{lun}.bin"),
+                        ("BackupGPT", "gpt_backup{lun}.bin"),
+                    };
 
-            return 0;
+                default: // Unknown - 使用完整瀑布流
+                    return new[]
+                    {
+                        ("PrimaryGPT", "gpt_main{lun}.bin"),
+                        ("BackupGPT", "gpt_main{lun}.bin"),
+                        ("BackupGPT", "gpt_backup{lun}.bin"),
+                        ("gpt_backup0.bin", "gpt_backup0.bin"),
+                        ("gpt_main0.bin", "gpt_main0.bin"),
+                        ("ssd", "ssd"),
+                        ("super", "super"),
+                        ("userdata", "userdata"),
+                    };
+            }
         }
 
-        // [新增] 伪装读取分区 (Waterfall Strategy + GptMain Segmentation)
-        public override async Task<bool> ReadPartitionAsync(FirehoseClient client, PartitionInfo part, string savePath, Action<long, long> progress, CancellationToken ct, Action<string> log)
+        /// <summary>
+        /// 验证 GPT 数据有效性
+        /// </summary>
+        private bool IsValidGptData(byte[] data)
         {
-            // 瀑布流尝试列表: (filename, label, useRelativeSector, isSegmented)
-            var strategies = new List<(string filename, string label, bool useRelativeSector, bool isSegmented)>();
-
-            // 1. 优先尝试 gpt_main0.bin (Segmented) - 用户要求的 "gptmain方案"
-            // 只有当读取范围涉及 Gap 扇区时，才会真正执行分段；否则会自动降级为普通 gpt_main0.bin 读取
-            bool isUfs = client.StorageType.Contains("ufs");
-            
-            // [修改] 对 super 和 userdata 分区强制启用分段读取策略
-            // 即使它们不一定跨越 Gap (通常在 Gap 之后)，但为了绕过限制，我们可能需要特殊处理
-            // 这里我们简单地将它们视为需要 Segmented 处理的候选者
-            string pName = part.Name.ToLower();
-            bool isSpecialPartition = (pName == "super" || pName == "userdata");
-
-            if (isUfs)
+            if (data == null || data.Length < 512) return false;
+            // 检查 GPT 签名 "EFI PART" at offset 512
+            if (data.Length >= 520)
             {
-                strategies.Add(("gpt_main0.bin", "gpt_main0.bin", false, true)); // UFS Scheme (Split 6)
+                return data[512] == 0x45 && data[513] == 0x46 && 
+                       data[514] == 0x49 && data[515] == 0x20 &&
+                       data[516] == 0x50 && data[517] == 0x41 &&
+                       data[518] == 0x52 && data[519] == 0x54;
             }
-            else
+            return data.Length > 0;
+        }
+
+        #endregion
+
+        #region Partition Reading (Optimized)
+
+        public override async Task<bool> ReadPartitionAsync(FirehoseClient client, PartitionInfo part, string savePath, 
+            Action<long, long> progress, CancellationToken ct, Action<string> log)
+        {
+            // 如果还没检测模式，先检测
+            if (_currentRwMode == OplusRwMode.Unknown)
             {
-                strategies.Add(("gpt_main0.bin", "gpt_main0.bin", false, true)); // eMMC Scheme (Split 34)
+                _currentRwMode = await DetectRwModeAsync(client, log, ct);
             }
 
-            // 2. 其次尝试 BackupGPT
-            strategies.Add(("gpt_backup0.bin", "BackupGPT", false, false));
-
-            // 3. 添加通用后备策略
-            strategies.Add(("ssd", "ssd", false, false));                         // 策略: 尝试 ssd (Raw)
-            // [修改] 移除 super 和 userdata 的后备策略，因为它们现在主要依赖 gpt_main0.bin 方案
-            // strategies.Add(("super", "super", true, false));
-            // strategies.Add(("userdata", "userdata", true, false));
-            strategies.Add((part.Name, part.Name, true, false));                  // 策略: 真实名称 (Relative)
-
-            // [已移除] super/userdata 不再优先尝试真实名称，而是遵循 gptmain -> BackupGPT 的顺序
-            /*
-            string nameLower = part.Name.ToLower();
-            if (nameLower == "super" || nameLower == "userdata")
+            // 根据模式选择读取策略
+            switch (_currentRwMode)
             {
-                strategies.Insert(0, (part.Name, part.Name, true, false));
-                strategies.Insert(1, (part.Name, part.Name, false, false));
-            }
-            */
+                case OplusRwMode.GptBackup:
+                    return await ReadWithGptBackupMode(client, part, savePath, progress, ct, log);
 
-            foreach (var (spoofName, spoofLabel, useRelative, isSegmented) in strategies)
+                case OplusRwMode.GptMain_Mode1:
+                case OplusRwMode.GptMain_Mode2:
+                    return await ReadWithGptMainMode(client, part, savePath, progress, ct, log);
+
+                case OplusRwMode.Normal:
+                    return await ReadWithNormalMode(client, part, savePath, progress, ct, log);
+
+                default:
+                    return await ReadWithWaterfallStrategy(client, part, savePath, progress, ct, log);
+            }
+        }
+
+        /// <summary>
+        /// GptBackup 模式读取
+        /// </summary>
+        private async Task<bool> ReadWithGptBackupMode(FirehoseClient client, PartitionInfo part, string savePath,
+            Action<long, long> progress, CancellationToken ct, Action<string> log)
+        {
+            log($"[Read] {part.Name} (gptbackup 模式)");
+
+            var strategies = new[]
+            {
+                ("gpt_backup0.bin", "BackupGPT"),
+                ("gpt_backup0.bin", "gpt_backup0.bin"),
+                ("ssd", "ssd"),
+            };
+
+            foreach (var (filename, label) in strategies)
             {
                 if (ct.IsCancellationRequested) return false;
 
                 try
                 {
-                    bool success = false;
-
-                    if (isSegmented)
-                    {
-                        // 区分 eMMC 和 UFS 方案
-                        // 根据 StorageType 决定 Scheme
-                        bool isUfsScheme = isUfs;
-                        
-                        string schemeName = isUfsScheme ? "UFS (0-5,6,7+)" : "eMMC (0-33,34,35+)";
-                        
-                        // [Check] 检查读取范围是否涉及关键扇区 (Gap)
-                        // 如果不涉及，则不需要分段，直接作为普通 gpt_main0.bin 读取
-                        long gapSector = isUfsScheme ? 6 : 34;
-                        long start = (long)part.StartLba;
-                        long end = start + (long)part.Sectors - 1;
-                        
-                        // [修改] 对于 super 和 userdata，即使不跨越 Gap，也强制使用分段读取逻辑 (如果需要特殊处理)
-                        // 但目前的 ReadSegmentedAsync 主要是为了跳过 Gap。
-                        // 如果 super/userdata 在 Gap 之后 (通常如此)，它们会被降级为普通 gpt_main0.bin 读取。
-                        // 这符合 "gptmain方案" 的要求：即用 gpt_main0.bin 伪装来读取任意分区。
-                        // 只要 start > gapSector，就会走下面的降级逻辑，使用 gpt_main0.bin 读取。
-                        
-                        if (start > gapSector || end < gapSector)
-                        {
-                            // 范围不涉及 Gap，降级为普通读取
-                            success = await client.ReadPartitionChunkedAsync(
-                                savePath, 
-                                part.StartLba.ToString(), 
-                                (long)part.Sectors, 
-                                part.Lun.ToString(), 
-                                progress, 
-                                ct, 
-                                spoofLabel, 
-                                spoofName,
-                                append: false,
-                                suppressError: true 
-                            );
-                        }
-                        else
-                        {
-                            // 范围涉及 Gap，执行分段读取
-                            // 获取当前 LUN 的首个分区名称 (用于 Gap 填充)
-                            string firstPartName = _lunFirstPartitions.ContainsKey(part.Lun) ? _lunFirstPartitions[part.Lun] : part.Name;
-                            
-                            // 定义分段点
-                            long[] splitPoints = new long[] { gapSector };
-                            
-                            success = await ReadSegmentedAsync(client, part, savePath, splitPoints, firstPartName, progress, ct, log);
-                        }
-                    }
-                    else
-                    {
-                        string startSectorStr = useRelative ? "0" : part.StartLba.ToString();
-                        string modeStr = useRelative ? "Relative" : "Absolute";
-                        success = await client.ReadPartitionChunkedAsync(
-                            savePath, 
-                            startSectorStr, 
-                            (long)part.Sectors, 
-                            part.Lun.ToString(), 
-                            progress, 
-                            ct, 
-                            spoofLabel, 
-                            spoofName,
-                            append: false,
-                            suppressError: true 
-                        );
-                    }
+                    bool success = await client.ReadPartitionChunkedAsync(
+                        savePath,
+                        part.StartLba.ToString(),
+                        (long)part.Sectors,
+                        part.Lun.ToString(),
+                        progress,
+                        ct,
+                        label,
+                        filename,
+                        append: false,
+                        suppressError: true
+                    );
 
                     if (success) return true;
                 }
-                catch (Exception ex)
-                {
-                    log($"[Error] {part.Name} 读取失败 ({spoofName}): {ex.Message}");
-                }
-                
-                await Task.Delay(100, ct);
+                catch { }
+
+                await Task.Delay(50);
             }
 
-            log($"[Error] 读取失败: {part.Name}");
             return false;
         }
 
-        // [辅助] 分段读取逻辑 (GptMain Scheme)
-        private async Task<bool> ReadSegmentedAsync(FirehoseClient client, PartitionInfo part, string savePath, long[] splitPoints, string firstPartName, Action<long, long> progress, CancellationToken ct, Action<string> log)
+        /// <summary>
+        /// GptMain 模式读取 (支持 Gap 分段)
+        /// </summary>
+        private async Task<bool> ReadWithGptMainMode(FirehoseClient client, PartitionInfo part, string savePath,
+            Action<long, long> progress, CancellationToken ct, Action<string> log)
+        {
+            long startSector = (long)part.StartLba;
+            long endSector = startSector + (long)part.Sectors - 1;
+
+            // 检查是否涉及 Gap
+            bool involvesGap = (startSector <= _gapSector && endSector >= _gapSector);
+
+            if (involvesGap && _gapSector > 0)
+            {
+                // 需要分段读取
+                log($"[Read] {part.Name} (gptmain 分段模式, Gap @ {_gapSector})");
+                return await ReadSegmentedAroundGap(client, part, savePath, progress, ct, log);
+            }
+            else
+            {
+                // 普通 gptmain 读取
+                log($"[Read] {part.Name} (gptmain 模式)");
+                return await client.ReadPartitionChunkedAsync(
+                    savePath,
+                    part.StartLba.ToString(),
+                    (long)part.Sectors,
+                    part.Lun.ToString(),
+                    progress,
+                    ct,
+                    "gpt_main0.bin",
+                    "gpt_main0.bin",
+                    append: false,
+                    suppressError: false
+                );
+            }
+        }
+
+        /// <summary>
+        /// 围绕 Gap 分段读取
+        /// </summary>
+        private async Task<bool> ReadSegmentedAroundGap(FirehoseClient client, PartitionInfo part, string savePath,
+            Action<long, long> progress, CancellationToken ct, Action<string> log)
         {
             long currentSector = (long)part.StartLba;
             long remainingSectors = (long)part.Sectors;
             long totalBytes = remainingSectors * client.SectorSize;
             long currentBytesRead = 0;
 
-            // 如果是追加模式，需要先清空文件
+            // 清空目标文件
             if (File.Exists(savePath)) File.Delete(savePath);
+
+            string firstPartName = _lunFirstPartitions.ContainsKey(part.Lun) 
+                ? _lunFirstPartitions[part.Lun] 
+                : part.Name;
 
             while (remainingSectors > 0)
             {
                 if (ct.IsCancellationRequested) return false;
 
-                // 确定当前分段的结束点
-                long nextBoundary = -1;
-                long splitPoint = splitPoints[0]; // 假设只有一个分段点 (34 或 6)
-                
-                // Segment 1: 0 - (splitPoint-1)
-                // Segment 2: splitPoint
-                // Segment 3: (splitPoint+1) - End
-
                 string currentFilename = "gpt_main0.bin";
                 string currentLabel = "gpt_main0.bin";
+                long sectorsToRead = remainingSectors;
 
-                long sectorsToReadThisChunk = remainingSectors;
-
-                if (currentSector < splitPoint)
+                if (currentSector < _gapSector)
                 {
-                    // 在 Segment 1
-                    long dist = splitPoint - currentSector;
-                    sectorsToReadThisChunk = Math.Min(remainingSectors, dist);
-                    // Filename/Label 保持 gpt_main0.bin
+                    // Segment 1: 0 到 Gap-1
+                    long dist = _gapSector - currentSector;
+                    sectorsToRead = Math.Min(remainingSectors, dist);
                 }
-                else if (currentSector == splitPoint)
+                else if (currentSector == _gapSector)
                 {
-                    // 在 Segment 2 (Gap)
-                    sectorsToReadThisChunk = 1;
-                    // 使用首个分区名称
+                    // Segment 2: Gap 扇区 (使用首个分区名称伪装)
+                    sectorsToRead = 1;
                     currentFilename = firstPartName;
                     currentLabel = firstPartName;
+                    log($"[Debug] 读取 Gap 扇区 {_gapSector} (伪装: {firstPartName})");
                 }
-                else
-                {
-                    // 在 Segment 3
-                    // Filename/Label 保持 gpt_main0.bin
-                }
+                // else: Segment 3 - Gap+1 到末尾，使用默认 gpt_main0.bin
 
-                // 执行读取
                 bool success = await client.ReadPartitionChunkedAsync(
                     savePath,
                     currentSector.ToString(),
-                    sectorsToReadThisChunk,
+                    sectorsToRead,
                     part.Lun.ToString(),
                     (c, t) => progress?.Invoke(currentBytesRead + c, totalBytes),
                     ct,
                     currentLabel,
                     currentFilename,
-                    append: true, // 必须追加
-                    suppressError: true
+                    append: true,
+                    suppressError: false
                 );
 
-                if (!success) return false;
+                if (!success)
+                {
+                    log($"[Error] 分段读取失败 @ sector {currentSector}");
+                    return false;
+                }
 
-                currentSector += sectorsToReadThisChunk;
-                remainingSectors -= sectorsToReadThisChunk;
-                currentBytesRead += sectorsToReadThisChunk * client.SectorSize;
+                currentSector += sectorsToRead;
+                remainingSectors -= sectorsToRead;
+                currentBytesRead += sectorsToRead * client.SectorSize;
             }
 
             return true;
         }
 
-        // [新增] 伪装写入分区 (Waterfall Strategy)
-        public override async Task<bool> WritePartitionAsync(FirehoseClient client, PartitionInfo part, string imagePath, Action<long, long> progress, CancellationToken ct, Action<string> log)
+        /// <summary>
+        /// 普通模式读取
+        /// </summary>
+        private async Task<bool> ReadWithNormalMode(FirehoseClient client, PartitionInfo part, string savePath,
+            Action<long, long> progress, CancellationToken ct, Action<string> log)
         {
-            // 写入通常使用绝对偏移，除非是文件模式写入 (较少见)
-            // 这里主要关注伪装文件名
-            var strategies = new List<(string filename, string label)>
+            log($"[Read] {part.Name} (普通模式)");
+            return await client.ReadPartitionAsync(
+                savePath,
+                part.StartLba.ToString(),
+                (long)part.Sectors,
+                part.Lun.ToString(),
+                progress,
+                ct,
+                part.Name
+            );
+        }
+
+        /// <summary>
+        /// 瀑布流策略读取 (未知模式时使用)
+        /// </summary>
+        private async Task<bool> ReadWithWaterfallStrategy(FirehoseClient client, PartitionInfo part, string savePath,
+            Action<long, long> progress, CancellationToken ct, Action<string> log)
+        {
+            log($"[Read] {part.Name} (瀑布流策略)");
+
+            bool isUfs = client.StorageType.Contains("ufs");
+            long gapSector = isUfs ? 6 : 34;
+
+            var strategies = new List<(string filename, string label, bool checkGap)>
             {
-                ("gpt_backup0.bin", "BackupGPT"),       // 策略1
-                ("gpt_backup0.bin", "gpt_backup0.bin"), // 策略2
-                ("gpt_main0.bin", "gpt_main0.bin"),     // 策略3
-                ("ssd", "ssd"),                         // 策略4
-                (part.Name, part.Name)                  // 策略5
+                ("gpt_main0.bin", "gpt_main0.bin", true),
+                ("gpt_backup0.bin", "BackupGPT", false),
+                ("gpt_backup0.bin", "gpt_backup0.bin", false),
+                ("ssd", "ssd", false),
+                (part.Name, part.Name, false),
             };
 
-            // [修改] 移除 super 和 userdata 的特殊插入逻辑，以及从默认列表中移除它们
-            // string nameLower = part.Name.ToLower();
-            // if (nameLower == "super" || nameLower == "userdata") ...
+            foreach (var (filename, label, checkGap) in strategies)
+            {
+                if (ct.IsCancellationRequested) return false;
 
-            foreach (var (spoofName, spoofLabel) in strategies)
+                try
+                {
+                    bool success;
+
+                    if (checkGap)
+                    {
+                        // 检查是否涉及 Gap
+                        long start = (long)part.StartLba;
+                        long end = start + (long)part.Sectors - 1;
+
+                        if (start <= gapSector && end >= gapSector)
+                        {
+                            // 需要分段
+                            _gapSector = gapSector;
+                            success = await ReadSegmentedAroundGap(client, part, savePath, progress, ct, log);
+                        }
+                        else
+                        {
+                            success = await client.ReadPartitionChunkedAsync(
+                                savePath, part.StartLba.ToString(), (long)part.Sectors, part.Lun.ToString(),
+                                progress, ct, label, filename, false, true);
+                        }
+                    }
+                    else
+                    {
+                        success = await client.ReadPartitionChunkedAsync(
+                            savePath, part.StartLba.ToString(), (long)part.Sectors, part.Lun.ToString(),
+                            progress, ct, label, filename, false, true);
+                    }
+
+                    if (success)
+                    {
+                        log($"[Success] 使用策略: {filename}");
+                        return true;
+                    }
+                }
+                catch { }
+
+                await Task.Delay(50);
+            }
+
+            log($"[Error] 读取失败: {part.Name}");
+            return false;
+        }
+
+        #endregion
+
+        #region Partition Writing (Optimized)
+
+        public override async Task<bool> WritePartitionAsync(FirehoseClient client, PartitionInfo part, string imagePath,
+            Action<long, long> progress, CancellationToken ct, Action<string> log)
+        {
+            if (_currentRwMode == OplusRwMode.Unknown)
+            {
+                _currentRwMode = await DetectRwModeAsync(client, log, ct);
+            }
+
+            log($"[Write] {part.Name} (模式: {_currentRwMode})");
+
+            var strategies = GetWriteSpoofStrategies();
+
+            foreach (var (filename, label) in strategies)
             {
                 if (ct.IsCancellationRequested) return false;
 
                 try
                 {
                     bool success = await client.FlashPartitionAsync(
-                        imagePath, 
-                        part.StartLba.ToString(), 
-                        (long)part.Sectors, 
-                        part.Lun.ToString(), 
-                        progress, 
-                        ct, 
-                        spoofLabel, 
-                        spoofName
+                        imagePath,
+                        part.StartLba.ToString(),
+                        (long)part.Sectors,
+                        part.Lun.ToString(),
+                        progress,
+                        ct,
+                        label,
+                        filename
                     );
 
-                    if (success) return true;
+                    if (success)
+                    {
+                        log($"[Success] 写入成功 (策略: {filename})");
+                        return true;
+                    }
                 }
                 catch (Exception ex)
                 {
-                    log($"[Error] {part.Name} 写入失败 ({spoofName}): {ex.Message}");
+                    log($"[Debug] 策略 {filename} 失败: {ex.Message}");
                 }
 
-                await Task.Delay(100, ct);
+                await Task.Delay(50);
             }
 
             log($"[Error] 写入失败: {part.Name}");
             return false;
         }
+
+        /// <summary>
+        /// 根据模式获取写入策略
+        /// </summary>
+        private (string filename, string label)[] GetWriteSpoofStrategies()
+        {
+            switch (_currentRwMode)
+            {
+                case OplusRwMode.GptBackup:
+                    return new[]
+                    {
+                        ("gpt_backup0.bin", "BackupGPT"),
+                        ("gpt_backup0.bin", "gpt_backup0.bin"),
+                        ("ssd", "ssd"),
+                    };
+
+                case OplusRwMode.GptMain_Mode1:
+                case OplusRwMode.GptMain_Mode2:
+                    return new[]
+                    {
+                        ("gpt_main0.bin", "gpt_main0.bin"),
+                        ("gpt_backup0.bin", "BackupGPT"),
+                        ("ssd", "ssd"),
+                    };
+
+                default:
+                    return new[]
+                    {
+                        ("gpt_backup0.bin", "BackupGPT"),
+                        ("gpt_backup0.bin", "gpt_backup0.bin"),
+                        ("gpt_main0.bin", "gpt_main0.bin"),
+                        ("ssd", "ssd"),
+                    };
+            }
+        }
+
+        #endregion
+
+        #region Utilities
+
+        /// <summary>
+        /// 重置检测状态 (用于设备更换时)
+        /// </summary>
+        public void ResetDetection()
+        {
+            _currentRwMode = OplusRwMode.Unknown;
+            _gapSector = 6;
+            _lunFirstPartitions.Clear();
+        }
+
+        /// <summary>
+        /// 获取当前检测到的模式
+        /// </summary>
+        public OplusRwMode CurrentRwMode => _currentRwMode;
+
+        /// <summary>
+        /// 获取 Gap 扇区位置
+        /// </summary>
+        public long GapSector => _gapSector;
+
+        #endregion
     }
 }

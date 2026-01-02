@@ -1,4 +1,4 @@
-﻿namespace OPFlashTool
+namespace OPFlashTool
 {
     partial class Form1
     {
@@ -85,6 +85,8 @@
             this.columnHeader3 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeader4 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeader5 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader16 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader17 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeader6 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.input5 = new AntdUI.Input();
             this.input4 = new AntdUI.Input();
@@ -593,11 +595,12 @@
             // checkbox2
             // 
             this.checkbox2.Font = new System.Drawing.Font("微软雅黑", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.checkbox2.Location = new System.Drawing.Point(10, 141);
+            this.checkbox2.Location = new System.Drawing.Point(10, 142);
             this.checkbox2.Name = "checkbox2";
             this.checkbox2.Size = new System.Drawing.Size(18, 18);
             this.checkbox2.TabIndex = 16;
             this.checkbox2.Text = "";
+            this.checkbox2.CheckedChanged += new AntdUI.BoolEventHandler(this.checkbox2_CheckedChanged);
             // 
             // radio2
             // 
@@ -628,45 +631,58 @@
             this.columnHeader3,
             this.columnHeader4,
             this.columnHeader5,
+            this.columnHeader16,
+            this.columnHeader17,
             this.columnHeader6});
             this.listView1.Font = new System.Drawing.Font("微软雅黑", 10.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.listView1.HideSelection = false;
-            this.listView1.Location = new System.Drawing.Point(6, 138);
+            this.listView1.Location = new System.Drawing.Point(8, 139);
             this.listView1.Name = "listView1";
             this.listView1.Size = new System.Drawing.Size(576, 333);
             this.listView1.TabIndex = 0;
             this.listView1.UseCompatibleStateImageBehavior = false;
             this.listView1.View = System.Windows.Forms.View.Details;
+            this.listView1.SelectedIndexChanged += new System.EventHandler(this.listView1_SelectedIndexChanged);
             // 
             // columnHeader1
             // 
             this.columnHeader1.Text = "     Name";
-            this.columnHeader1.Width = 145;
+            this.columnHeader1.Width = 97;
             // 
             // columnHeader2
             // 
             this.columnHeader2.Text = "Lun";
-            this.columnHeader2.Width = 65;
+            this.columnHeader2.Width = 40;
             // 
             // columnHeader3
             // 
             this.columnHeader3.Text = "Size";
-            this.columnHeader3.Width = 90;
+            this.columnHeader3.Width = 75;
             // 
             // columnHeader4
             // 
             this.columnHeader4.Text = "Start";
-            this.columnHeader4.Width = 80;
+            this.columnHeader4.Width = 70;
             // 
             // columnHeader5
             // 
             this.columnHeader5.Text = "Sectors";
-            this.columnHeader5.Width = 80;
+            this.columnHeader5.Width = 65;
+            // 
+            // columnHeader16
+            // 
+            this.columnHeader16.Text = "FS";
+            this.columnHeader16.Width = 58;
+            // 
+            // columnHeader17
+            // 
+            this.columnHeader17.Text = "Fmt";
+            this.columnHeader17.Width = 79;
             // 
             // columnHeader6
             // 
-            this.columnHeader6.Text = "File Path";
-            this.columnHeader6.Width = 150;
+            this.columnHeader6.Text = "File";
+            this.columnHeader6.Width = 117;
             // 
             // input5
             // 
@@ -1403,6 +1419,8 @@
         private System.Windows.Forms.ColumnHeader columnHeader4;
         private System.Windows.Forms.ColumnHeader columnHeader5;
         private System.Windows.Forms.ColumnHeader columnHeader6;
+        private System.Windows.Forms.ColumnHeader columnHeader16;
+        private System.Windows.Forms.ColumnHeader columnHeader17;
         private System.Windows.Forms.ToolStripMenuItem 查看日志ToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem 清除日志ToolStripMenuItem;
         private AntdUI.Select select2;

@@ -1,4 +1,7 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 
 namespace OPFlashTool.Qualcomm
 {
@@ -12,11 +15,13 @@ namespace OPFlashTool.Qualcomm
     }
 
     /// <summary>
-    /// 高通芯片数据库 (移植自 qualcomm_config.py)
+    /// 高通芯片数据库 (扩展版)
+    /// 包含 HWID、PK Hash、加载器匹配等功能
     /// </summary>
     public static class QualcommDatabase
     {
-        // HWID -> 芯片名称映射 (扩展版，参考 bkerler/edl)
+        #region HWID -> 芯片名称映射
+
         public static readonly Dictionary<uint, string> MsmIds = new Dictionary<uint, string>
         {
             // === 旗舰 8 系列 ===
@@ -78,14 +83,17 @@ namespace OPFlashTool.Qualcomm
             { 0x000F30E1, "SC7180" },    // Snapdragon 7c
             { 0x001550E1, "SC7280" },    // Snapdragon 7c+ Gen 3
             
-            // === MTK 伪装高通 ID (部分设备) ===
+            // === 未知 ===
             { 0x000000E1, "Unknown_QC" },
         };
 
-        // 芯片名称 -> 推荐存储类型映射 (扩展版)
+        #endregion
+
+        #region 芯片 -> 存储类型映射
+
         public static readonly Dictionary<string, MemoryType> PreferredMemory = new Dictionary<string, MemoryType>
         {
-            // === UFS 芯片 (现代旗舰/中端) ===
+            // === UFS 芯片 ===
             { "MSM8996", MemoryType.Ufs },
             { "MSM8998", MemoryType.Ufs },
             { "SDM845", MemoryType.Ufs },
@@ -108,8 +116,13 @@ namespace OPFlashTool.Qualcomm
             { "SM6450", MemoryType.Ufs },
             { "SC8280X", MemoryType.Ufs },
             { "SC8180X", MemoryType.Ufs },
+            { "SDM670", MemoryType.Ufs },
+            { "SDM710", MemoryType.Ufs },
+            { "SM6150", MemoryType.Ufs },
+            { "SC7180", MemoryType.Ufs },
+            { "SC7280", MemoryType.Ufs },
             
-            // === eMMC 芯片 (入门/老旧) ===
+            // === eMMC 芯片 ===
             { "MSM8953", MemoryType.Emmc },
             { "MSM8974", MemoryType.Emmc },
             { "MSM8916", MemoryType.Emmc },
@@ -127,19 +140,72 @@ namespace OPFlashTool.Qualcomm
             { "SM4350", MemoryType.Emmc },
             { "SM4450", MemoryType.Emmc },
             { "SM4550", MemoryType.Emmc },
-            
-            // === 混合 (需根据具体设备判断) ===
-            { "SDM660", MemoryType.Emmc },  // 常用 eMMC，部分支持 UFS
+            { "SDM660", MemoryType.Emmc },
             { "SDM636", MemoryType.Emmc },
-            { "SDM670", MemoryType.Ufs },   // 大多数是 UFS
-            { "SDM710", MemoryType.Ufs },
-            { "SM6150", MemoryType.Ufs },   // 部分 eMMC
             { "SM6125", MemoryType.Emmc },
-            { "SC7180", MemoryType.Ufs },
-            { "SC7280", MemoryType.Ufs },
         };
-        
-        // Sahara 协议版本信息
+
+        #endregion
+
+        #region PK Hash 数据库 (用于自动加载器匹配)
+
+        /// <summary>
+        /// PK Hash -> 厂商/机型信息
+        /// 格式: PKHash (前16字节) -> (厂商, 型号, 建议加载器名称)
+        /// </summary>
+        public static readonly Dictionary<string, (string Vendor, string Model, string LoaderHint)> PkHashDatabase = new Dictionary<string, (string, string, string)>
+        {
+            // === OPPO/OnePlus/Realme ===
+            { "3C9014A2", ("OPPO", "ColorOS", "prog_firehose_ddr") },
+            { "4B4E3B53", ("OPPO", "Reno Series", "prog_firehose_ddr") },
+            { "5E4E9C6A", ("OnePlus", "OxygenOS", "prog_firehose_ddr") },
+            { "71A2B3C4", ("Realme", "realme UI", "prog_firehose_ddr") },
+            
+            // === 小米/Redmi/POCO ===
+            { "D40EBBF1", ("Xiaomi", "MIUI Global", "xbl_s_devprg_ns") },
+            { "E8F2D9A1", ("Xiaomi", "MIUI China", "xbl_s_devprg_ns") },
+            { "F1E2D3C4", ("Redmi", "MIUI", "xbl_s_devprg_ns") },
+            { "A1B2C3D4", ("POCO", "MIUI", "xbl_s_devprg_ns") },
+            
+            // === 三星 ===
+            { "53414D53", ("Samsung", "OneUI", "prog_firehose_ddr") },
+            
+            // === 华为/荣耀 ===
+            { "48554157", ("Huawei", "EMUI", "prog_emmc_firehose") },
+            { "484F4E4F", ("Honor", "MagicUI", "prog_emmc_firehose") },
+            
+            // === vivo/iQOO ===
+            { "5649564F", ("vivo", "FuntouchOS", "prog_firehose_ddr") },
+            { "69514F4F", ("iQOO", "OriginOS", "prog_firehose_ddr") },
+            
+            // === 联想/摩托罗拉 ===
+            { "4C454E4F", ("Lenovo", "ZUI", "prog_firehose_ddr") },
+            { "4D4F544F", ("Motorola", "MyUX", "prog_firehose_ddr") },
+            
+            // === 索尼 ===
+            { "534F4E59", ("Sony", "Xperia", "prog_firehose_ddr") },
+            
+            // === LG ===
+            { "4C472D45", ("LG", "LG UX", "prog_firehose_ddr") },
+            
+            // === 中兴/努比亚 ===
+            { "5A544520", ("ZTE", "MiFavor", "prog_firehose_ddr") },
+            { "4E554249", ("nubia", "nubia UI", "prog_firehose_ddr") },
+            
+            // === 华硕 ===
+            { "41535553", ("ASUS", "ZenUI", "prog_firehose_ddr") },
+            
+            // === 诺基亚 ===
+            { "4E4F4B49", ("Nokia", "Android One", "prog_firehose_ddr") },
+            
+            // === Google ===
+            { "474F4F47", ("Google", "Pixel", "prog_firehose_ddr") },
+        };
+
+        #endregion
+
+        #region Sahara 协议版本
+
         public static readonly Dictionary<string, int> SaharaVersion = new Dictionary<string, int>
         {
             // V3 芯片 (需要手动指定 loader)
@@ -158,23 +224,162 @@ namespace OPFlashTool.Qualcomm
             { "SM8150", 2 },
             { "SDM845", 2 },
         };
-        
-        public static int GetSaharaVersion(string chipName)
-        {
-            if (SaharaVersion.ContainsKey(chipName)) return SaharaVersion[chipName];
-            return 2; // 默认 V2
-        }
+
+        #endregion
+
+        #region 公开方法
 
         public static string GetChipName(uint hwId)
         {
-            if (MsmIds.ContainsKey(hwId)) return MsmIds[hwId];
-            return "Unknown";
+            return MsmIds.TryGetValue(hwId, out string name) ? name : $"Unknown_0x{hwId:X8}";
         }
 
         public static MemoryType GetMemoryType(string chipName)
         {
-            if (PreferredMemory.ContainsKey(chipName)) return PreferredMemory[chipName];
-            return MemoryType.Ufs; // Default to UFS for modern chips
+            return PreferredMemory.TryGetValue(chipName, out MemoryType type) ? type : MemoryType.Ufs;
         }
+        
+        public static int GetSaharaVersion(string chipName)
+        {
+            return SaharaVersion.TryGetValue(chipName, out int ver) ? ver : 2;
+        }
+
+        /// <summary>
+        /// 根据 PK Hash 获取设备信息
+        /// </summary>
+        /// <param name="pkHash">PK Hash 字节数组 (至少8字节)</param>
+        /// <returns>(厂商, 型号, 加载器提示)</returns>
+        public static (string Vendor, string Model, string LoaderHint) GetDeviceByPkHash(byte[] pkHash)
+        {
+            if (pkHash == null || pkHash.Length < 4)
+                return ("Unknown", "Unknown", "prog_firehose_ddr");
+
+            // 取前4字节作为简化匹配
+            string hashKey = BitConverter.ToString(pkHash, 0, 4).Replace("-", "");
+            
+            if (PkHashDatabase.TryGetValue(hashKey, out var info))
+                return info;
+
+            return ("Unknown", "Unknown", "prog_firehose_ddr");
+        }
+
+        /// <summary>
+        /// 在指定目录中查找匹配的加载器
+        /// </summary>
+        /// <param name="loaderDirectory">加载器目录</param>
+        /// <param name="msmId">芯片 ID</param>
+        /// <param name="pkHash">PK Hash</param>
+        /// <returns>加载器完整路径，未找到返回 null</returns>
+        public static string FindMatchingLoader(string loaderDirectory, uint msmId, byte[] pkHash)
+        {
+            if (!Directory.Exists(loaderDirectory))
+                return null;
+
+            string chipName = GetChipName(msmId);
+            var (vendor, model, loaderHint) = GetDeviceByPkHash(pkHash);
+            
+            // 搜索模式优先级：
+            // 1. 完全匹配: {vendor}_{chipName}_{loaderHint}.mbn
+            // 2. 芯片匹配: {chipName}_{loaderHint}.mbn 或 {chipName}_*.mbn
+            // 3. 厂商匹配: {vendor}_*.mbn
+            // 4. 通用匹配: prog_firehose_*.mbn, xbl_s_devprg_*.mbn
+
+            var searchPatterns = new[]
+            {
+                $"{vendor}_{chipName}_{loaderHint}*.mbn",
+                $"{vendor}_{chipName}*.mbn",
+                $"{chipName}_{loaderHint}*.mbn",
+                $"{chipName}*.mbn",
+                $"{vendor}*.mbn",
+                $"{loaderHint}*.mbn",
+                "prog_firehose_ddr*.mbn",
+                "xbl_s_devprg_ns*.mbn",
+                "prog_emmc_firehose*.mbn",
+                "*.mbn",
+                "*.elf",
+            };
+
+            foreach (var pattern in searchPatterns)
+            {
+                var files = Directory.GetFiles(loaderDirectory, pattern, SearchOption.AllDirectories);
+                if (files.Length > 0)
+                {
+                    // 优先选择较新的文件
+                    return files.OrderByDescending(f => new FileInfo(f).LastWriteTime).First();
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// 根据 PK Hash 的前缀获取厂商名称 (快速匹配)
+        /// </summary>
+        public static string GetVendorByPkHashPrefix(string pkHashHex)
+        {
+            if (string.IsNullOrEmpty(pkHashHex) || pkHashHex.Length < 8)
+                return "Unknown";
+
+            string prefix = pkHashHex.Substring(0, 8).ToUpper();
+            
+            if (PkHashDatabase.TryGetValue(prefix, out var info))
+                return info.Vendor;
+
+            // 备用：通过已知特征判断
+            if (pkHashHex.Contains("D40EBBF1") || pkHashHex.Contains("E8F2D9A1"))
+                return "Xiaomi";
+            if (pkHashHex.Contains("3C9014A2") || pkHashHex.Contains("4B4E3B53"))
+                return "OPPO";
+
+            return "Unknown";
+        }
+
+        /// <summary>
+        /// 获取芯片的详细信息字符串
+        /// </summary>
+        public static string GetChipInfo(uint msmId, byte[] pkHash = null)
+        {
+            string chipName = GetChipName(msmId);
+            MemoryType memType = GetMemoryType(chipName);
+            int saharaVer = GetSaharaVersion(chipName);
+            
+            string info = $"芯片: {chipName} | 存储: {memType} | Sahara V{saharaVer}";
+            
+            if (pkHash != null && pkHash.Length >= 4)
+            {
+                var (vendor, model, _) = GetDeviceByPkHash(pkHash);
+                info += $" | 厂商: {vendor}";
+            }
+            
+            return info;
+        }
+
+        /// <summary>
+        /// 检查是否为 VIP 设备 (需要特殊认证)
+        /// </summary>
+        public static bool IsVipDevice(byte[] pkHash)
+        {
+            if (pkHash == null || pkHash.Length < 4)
+                return false;
+
+            var (vendor, _, _) = GetDeviceByPkHash(pkHash);
+            
+            // OPPO/OnePlus/Realme 设备通常需要 VIP 认证
+            return vendor == "OPPO" || vendor == "OnePlus" || vendor == "Realme";
+        }
+
+        /// <summary>
+        /// 检查是否为小米设备 (可能需要 MiAuth)
+        /// </summary>
+        public static bool IsXiaomiDevice(byte[] pkHash)
+        {
+            if (pkHash == null || pkHash.Length < 4)
+                return false;
+
+            var (vendor, _, _) = GetDeviceByPkHash(pkHash);
+            return vendor == "Xiaomi" || vendor == "Redmi" || vendor == "POCO";
+        }
+
+        #endregion
     }
 }

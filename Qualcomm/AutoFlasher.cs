@@ -140,93 +140,52 @@ namespace OPFlashTool.Qualcomm
                     uint? detectedHwId = null;
 
                     // --- START 核心逻辑 ---
-                    // 1. Sahara 引导
+                    // 1. Sahara 智能引导 (改进版)
                     if (!skipLoader)
                     {
                         var sahara = new SaharaClient(port, _log);
-                        string finalLoader = userProgPath;
                         
-                        // A. 策略：用户没选文件 -> 尝试自动从设备读取 ID 并查找
-                        if (string.IsNullOrEmpty(finalLoader) || !File.Exists(finalLoader))
+                        // 使用智能握手流程
+                        var handshakeResult = await sahara.SmartHandshakeAsync(
+                            userSelectedLoader: userProgPath,  // 用户选择的 Loader (可为空)
+                            loaderDirectory: _loaderDir,       // 自动搜索目录
+                            enableCloudLookup: false           // 暂不启用云端查询
+                        );
+
+                        // 保存设备信息用于后续操作
+                        if (handshakeResult.DeviceInfoRead && handshakeResult.PblInfo != null)
                         {
-                            _log("[自动] 未指定引导文件，尝试读取设备 ID...");
-                            
-                            // 尝试无文件读取 ID
-                            var devInfo = sahara.ReadDeviceInfo();
-
-                            if (devInfo.ContainsKey("MSM_HWID"))
+                            if (!string.IsNullOrEmpty(handshakeResult.PblInfo.MsmId))
                             {
-                                string hwIdStr = devInfo["MSM_HWID"];
-                                // 取前 8 个字符 (4字节) 作为 HWID
-                                if (hwIdStr.Length >= 8)
+                                try
                                 {
-                                    try 
-                                    {
-                                        detectedHwId = Convert.ToUInt32(hwIdStr.Substring(0, 8), 16);
-                                        string chipName = QualcommDatabase.GetChipName(detectedHwId.Value);
-                                        _log($"[识别] 芯片型号: {chipName} (HWID: {detectedHwId.Value:X})");
-                                        
-                                        if (devInfo.ContainsKey("PK_HASH")) _log($"[识别] PK Hash: {devInfo["PK_HASH"]}");
-                                        if (devInfo.ContainsKey("SerialNumber")) _log($"[识别] Serial: {devInfo["SerialNumber"]}");
-
-                                        // 自动查找: bin/Loaders/prog_firehose_{chipName}.{ext}
-                                        string[] extensions = { ".elf", ".melf", ".mbn", ".bin", ".digest" };
-                                        string foundPath = null;
-
-                                        // 1. 尝试匹配专用引导 (prog_firehose_{chipName})
-                                        foreach (var ext in extensions)
-                                        {
-                                            string p = Path.Combine(_loaderDir, $"prog_firehose_{chipName.ToLower()}{ext}");
-                                            if (File.Exists(p))
-                                            {
-                                                foundPath = p;
-                                                break;
-                                            }
-                                        }
-
-                                        // 2. 尝试匹配通用引导 (prog_firehose_ddr)
-                                        if (foundPath == null)
-                                        {
-                                            foreach (var ext in extensions)
-                                            {
-                                                string p = Path.Combine(_loaderDir, $"prog_firehose_ddr{ext}");
-                                                if (File.Exists(p))
-                                                {
-                                                    foundPath = p;
-                                                    break;
-                                                }
-                                            }
-                                        }
-
-                                        if (foundPath != null)
-                                        {
-                                            finalLoader = foundPath;
-                                            _log($"[自动] 已匹配引导文件: {Path.GetFileName(finalLoader)}");
-                                        }
-                                        else
-                                        {
-                                            _log($"[错误] 数据库匹配到 {chipName}，但目录中缺少对应的引导文件 (.elf/.melf/.mbn/.bin/.digest)！");
-                                            return false;
-                                        }
-                                    }
-                                    catch { _log("[错误] 解析 HWID 失败"); }
+                                    detectedHwId = Convert.ToUInt32(handshakeResult.PblInfo.MsmId, 16);
                                 }
+                                catch { }
                             }
-                            else
+                        }
+
+                        // 检查握手结果
+                        if (!handshakeResult.Success)
+                        {
+                            // 需要用户操作
+                            if (handshakeResult.RequiresUserAction)
                             {
-                                _log("[错误] 无法读取设备 ID，且未手动指定引导文件。");
+                                _log("");
+                                _log("═══════════════════════════════════════════");
+                                _log("  ⚠️ 需要手动选择 Loader");
+                                _log("═══════════════════════════════════════════");
+                                _log(handshakeResult.UserGuidance);
+                                _log("");
+                                _log("[提示] 请选择正确的 Loader 后重新连接设备");
+                                
+                                // 返回 false 但不视为错误，只是需要用户操作
                                 return false;
                             }
-                        }
-                        else
-                        {
-                            _log($"[手动] 使用用户指定的引导文件: {Path.GetFileName(finalLoader)}");
-                        }
-                        
-                        if (!sahara.HandshakeAndLoad(finalLoader))
-                        {
-                             _log("[失败] Sahara 引导失败，请检查文件是否匹配。");
-                             return false; 
+                            
+                            // 真正的错误
+                            _log($"[失败] Sahara 引导失败: {handshakeResult.ErrorMessage}");
+                            return false;
                         }
                         
                         _log("[等待] Firehose 正在启动...");
@@ -234,7 +193,7 @@ namespace OPFlashTool.Qualcomm
                     }
                     else
                     {
-                         _log("[引导] 跳过引导阶段 (假设设备已在 Firehose 模式)");
+                        _log("[引导] 跳过引导阶段 (假设设备已在 Firehose 模式)");
                     }
 
                     // 2. 创建 Client
@@ -249,6 +208,19 @@ namespace OPFlashTool.Qualcomm
                     // 因此，当 skipLoader=true 时，我们应当跳过认证步骤。
                     if (!skipLoader)
                     {
+                        // ============== 新增：标准模式自动检测认证 ==============
+                        // 如果用户选择的是标准模式，先检测设备是否需要认证
+                        if (authType == AuthType.Standard)
+                        {
+                            var autoDetectedStrategy = await AutoDetectAuthStrategyAsync(firehose, userDigestPath, userSignPath, ct);
+                            if (autoDetectedStrategy != null)
+                            {
+                                _log($"[自动检测] 检测到设备需要 {autoDetectedStrategy.Name} 认证");
+                                strategy = autoDetectedStrategy;
+                            }
+                        }
+                        // ============== 自动检测结束 ==============
+
                         authResult = await strategy.AuthenticateAsync(
                             firehose, 
                             userProgPath ?? "", 
@@ -364,6 +336,134 @@ namespace OPFlashTool.Qualcomm
                     ForceReleasePort(ref port, portName, _log);
                 }
             }, ct);
+        }
+
+        /// <summary>
+        /// 自动检测设备是否需要认证，并返回合适的认证策略
+        /// 如果不需要认证或检测失败，返回 null (继续使用标准模式)
+        /// </summary>
+        private async Task<IDeviceStrategy> AutoDetectAuthStrategyAsync(
+            FirehoseClient firehose,
+            string userDigestPath,
+            string userSignPath,
+            CancellationToken ct)
+        {
+            try
+            {
+                _log("[自动检测] 正在检测设备认证需求...");
+                
+                // 创建增强 Firehose 客户端用于功能检测
+                var enhanced = new FirehoseEnhanced(firehose, _log);
+                
+                // 1. 尝试获取设备支持的功能列表
+                _log("[自动检测] 发送 NOP 命令检测支持的功能...");
+                var supportedFunctions = await enhanced.GetSupportedFunctionsAsync();
+                
+                if (supportedFunctions == null || supportedFunctions.Count == 0)
+                {
+                    _log("[自动检测] 无法获取功能列表，尝试直接配置测试...");
+                    
+                    // 2. 尝试直接配置，如果失败则可能需要认证
+                    bool configOk = await TryConfigureWithoutAuthAsync(firehose);
+                    if (configOk)
+                    {
+                        _log("[自动检测] 配置成功，设备不需要认证");
+                        return null;
+                    }
+                    
+                    _log("[自动检测] 配置失败，尝试检测认证类型...");
+                }
+                else
+                {
+                    _log($"[自动检测] 检测到 {supportedFunctions.Count} 个支持的功能");
+                    foreach (var func in supportedFunctions)
+                    {
+                        _log($"  - {func}");
+                    }
+                }
+
+                // 3. 根据功能列表检测认证类型
+                // 检测小米认证
+                bool hasDemacia = supportedFunctions?.Contains("demacia") == true;
+                bool hasSetProjModel = supportedFunctions?.Contains("setprojmodel") == true;
+                bool hasSetSwProjModel = supportedFunctions?.Contains("setswprojmodel") == true;
+                bool hasGetToken = supportedFunctions?.Contains("gettoken") == true;
+                
+                // 检测 Nothing 认证
+                bool hasNtFeature = supportedFunctions?.Contains("checkntfeature") == true;
+                
+                // 检测小米设备 (任一小米特有功能)
+                if (hasDemacia || hasSetProjModel || hasSetSwProjModel || hasGetToken)
+                {
+                    _log("[自动检测] ★ 检测到小米/红米设备特征");
+                    if (hasDemacia) _log("  - demacia: 需要 Mi-Demacia 认证");
+                    if (hasSetProjModel) _log("  - setprojmodel: 需要 Project 认证");
+                    if (hasSetSwProjModel) _log("  - setswprojmodel: 需要 SW-Project 认证");
+                    
+                    return new XiaomiDeviceStrategy();
+                }
+                
+                // 检测 Nothing Phone
+                if (hasNtFeature)
+                {
+                    _log("[自动检测] ★ 检测到 Nothing Phone 设备特征");
+                    _log("  - checkntfeature: 需要 Nothing 认证");
+                    
+                    // Nothing 认证暂时由 XiaomiDeviceStrategy 处理
+                    // TODO: 未来可以创建独立的 NothingDeviceStrategy
+                    return new XiaomiDeviceStrategy();
+                }
+                
+                // 注意: OPPO VIP 模式不进行自动检测
+                // 必须由用户手动选择 VIP 模式才会启用
+                // 这是为了避免误触发 VIP 认证流程
+                
+                // 4. 无需认证
+                _log("[自动检测] 未检测到特殊认证需求，使用标准模式");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _log($"[自动检测] 检测过程出错: {ex.Message}");
+                _log("[自动检测] 回退到标准模式");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 尝试不经认证直接配置 Firehose
+        /// </summary>
+        private async Task<bool> TryConfigureWithoutAuthAsync(FirehoseClient firehose)
+        {
+            try
+            {
+                // 尝试 UFS 配置
+                _log("[自动检测] 尝试 UFS 配置...");
+                bool ufsOk = firehose.Configure("ufs");
+                if (ufsOk && firehose.IsConfigured)
+                {
+                    _log("[自动检测] UFS 配置成功");
+                    return true;
+                }
+                
+                // 尝试 eMMC 配置
+                _log("[自动检测] 尝试 eMMC 配置...");
+                bool emmcOk = firehose.Configure("emmc");
+                if (emmcOk && firehose.IsConfigured)
+                {
+                    _log("[自动检测] eMMC 配置成功");
+                    return true;
+                }
+                
+                // 都失败了，可能需要认证
+                _log("[自动检测] 配置失败，设备可能需要认证");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _log($"[自动检测] 配置尝试异常: {ex.Message}");
+                return false;
+            }
         }
 
         /// <summary>

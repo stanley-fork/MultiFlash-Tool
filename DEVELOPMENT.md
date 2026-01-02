@@ -29,19 +29,57 @@ MultiFlash Tool/
 ├── Form1.cs              # 主窗体 (7个功能模块)
 ├── Form1.Designer.cs     # 窗体设计器代码
 ├── DeviceManager.cs      # 设备管理器
+├── GptParser.cs          # GPT 分区解析和管理
+├── XmlPartitionParser.cs # XML 分区配置解析
+│
 ├── Services/             # 服务层
-│   ├── AppSettings.cs    # 配置管理
+│   ├── AppSettings.cs    # 应用配置
 │   ├── ConfigManager.cs  # 配置管理器
-│   ├── CryptoService.cs  # 加密服务
+│   ├── SmartFlashService.cs # 🆕 智能刷机服务
+│   ├── FlashTaskExecutor.cs # 刷写任务执行器
+│   ├── PrettyLogger.cs   # 🆕 格式化日志系统
 │   ├── DependencyManager.cs # 依赖管理
-│   └── FlashTaskExecutor.cs # 刷写任务执行器
+│   ├── AutoUpdater.cs    # 自动更新检查
+│   └── SecurityService.cs # 安全服务
+│
 ├── Qualcomm/             # 高通协议实现
 │   ├── AutoFlasher.cs    # 自动刷机流程
-│   ├── FirehoseClient.cs # Firehose 客户端
-│   └── SaharaProtocol.cs # Sahara 协议
+│   ├── SaharaProtocol.cs # Sahara 协议 (V2/V3)
+│   ├── FirehoseProtocol.cs # Firehose 协议
+│   ├── FirehoseEnhanced.cs # 🆕 Firehose 增强
+│   ├── OFPDecryptor.cs   # 🆕 OFP/OZIP/OPS 解密器
+│   ├── OFPKeyBruteForce.cs # 🆕 密钥爆破器
+│   ├── DeviceInfoReader.cs # 🆕 设备信息读取
+│   ├── SparseImageHandler.cs # 🆕 Sparse/Raw 镜像处理
+│   ├── QualcommDatabase.cs # 🆕 设备数据库
+│   ├── DeviceIdentifier.cs # 🆕 设备识别
+│   ├── XiaomiAuth.cs     # 🆕 小米认证
+│   └── PartitionInfo.cs  # 分区信息
+│
+├── Authentication/       # 认证策略
+│   ├── IAuthStrategy.cs  # 认证策略接口
+│   ├── DefaultVipStrategy.cs # 默认 VIP 策略
+│   ├── StandardAuthStrategy.cs # 🆕 标准认证
+│   └── XiaomiAuthStrategy.cs # 🆕 小米认证策略
+│
+├── Strategies/           # 设备策略
+│   ├── IDeviceStrategy.cs # 设备策略接口
+│   ├── StandardDeviceStrategy.cs # 标准设备
+│   ├── OppoVipDeviceStrategy.cs # OPPO VIP 设备
+│   └── XiaomiDeviceStrategy.cs # 小米设备
+│
 ├── FastbootEnhance/      # Fastboot 增强
-│   └── Payload.cs        # Payload 解析
-└── Authentication/       # 认证模块
+│   ├── Payload.cs        # Payload 解析
+│   └── UpdateMetadata.cs # OTA 元数据
+│
+├── Localization/         # 多语言支持
+│   ├── LanguageManager.cs
+│   └── LocalizationManager.cs
+│
+└── Properties/           # 项目属性
+    ├── Resources.resx    # 资源文件
+    ├── Resources.zh-CN.resx # 中文资源
+    └── Resources.en.resx # 英文资源
 ```
 
 ## Form1.cs 模块划分
@@ -87,6 +125,84 @@ AppendLog("警告", Color.Orange);  // 警告
 AppendLog("错误", Color.Red);     // 错误
 ```
 
+## 🆕 核心模块说明
+
+### OFPDecryptor - OFP/OZIP/OPS 解密器
+
+支持解密 OPPO、OnePlus、Realme 的加密固件包。
+
+```csharp
+// 智能解密（自动检测类型）
+await OFPDecryptor.SmartExtractAsync(firmwarePath, outputDir, ct);
+
+// 单独解密 OFP
+await OFPDecryptor.ExtractOFPAsync(ofpPath, outputDir, ct);
+
+// 解密 OZIP
+await OFPDecryptor.ExtractOZIPAsync(ozipPath, outputDir, ct);
+
+// 解密 OPS
+await OFPDecryptor.ExtractOPSAsync(opsPath, outputDir, ct);
+```
+
+支持的加密类型：
+- Qualcomm OFP (AES-128-CFB)
+- MTK OFP (AES-128-CFB + Shuffle)
+- OZIP (AES-128-ECB)
+- OPS (AES-128-ECB)
+
+### SmartFlashService - 智能刷机服务
+
+一键完成从连接到刷写的完整流程。
+
+```csharp
+var config = new SmartFlashConfig
+{
+    PortName = "COM3",
+    LoaderPath = "prog_firehose.mbn",
+    FirmwareDirectory = "C:\\Firmware",
+    AuthType = AuthType.Standard
+};
+
+var result = await SmartFlashService.ExecuteSmartFlashAsync(config, progress, ct);
+```
+
+### DeviceInfoReader - 设备信息读取
+
+从 EDL 模式读取 build.prop 信息。
+
+```csharp
+var reader = new DeviceInfoReader(firehoseClient, logger);
+var props = await reader.ReadBuildPropsAsync(ct);
+
+// 结果包含：
+// - ro.product.model
+// - ro.build.version.release
+// - ro.build.version.security_patch
+// 等
+```
+
+### OFPKeyBruteForce - 密钥爆破器
+
+当标准密钥无法解密时，启动智能爆破。
+
+```csharp
+var bruteForce = new OFPKeyBruteForce(ofpPath, pageSize, logger);
+var result = await bruteForce.BruteForceAsync(ct, progress);
+
+if (result.Success)
+{
+    Console.WriteLine($"找到密钥: {result.Key}");
+    Console.WriteLine($"IV: {result.Iv}");
+}
+```
+
+爆破模式：
+1. 基于已知模板的变体
+2. 简单密钥变体
+3. 增量字节爆破
+4. 随机密钥爆破
+
 ## 依赖包
 
 | 包名 | 版本 | 用途 |
@@ -96,6 +212,7 @@ AppendLog("错误", Color.Red);     // 错误
 | System.Text.Json | 8.0.5 | JSON 序列化 |
 | Newtonsoft.Json | 13.0.4 | JSON 兼容 |
 | Google.Protobuf | 3.17.3 | Protobuf 支持 |
+| System.IO.Ports | 8.0.0 | 串口通信 |
 
 ## 🚀 开发环境设置
 

@@ -85,19 +85,54 @@
 <a id="features"></a>
 ## ✨ 功能特性
 
+### 🆕 v2.0 新增功能
+
+- 🔐 **OFP/OZIP/OPS 固件解密**
+  - OPPO OFP 固件包自动解密
+  - OZIP 加密 ZIP 包解密
+  - OnePlus OPS 固件包解密
+  - 智能密钥爆破 (支持 50+ 组密钥)
+  - MTK/Qualcomm 芯片自动识别
+
+- 🚀 **智能一键刷机**
+  - 自动设备检测和连接
+  - 自动 Sahara 握手和 Loader 匹配
+  - 自动 Firehose 配置 (UFS/eMMC)
+  - 自动读取分区表并验证
+  - 详细的用户指引和错误提示
+
+- 📱 **设备信息读取**
+  - 从 EDL 模式读取 `build.prop`
+  - 支持 EXT4/EROFS/F2FS/SquashFS 文件系统
+  - 支持 Sparse 镜像和 LP 容器解析
+  - 显示 Android 版本、安全补丁等信息
+
+- 🔐 **多模式认证策略**
+  - 标准模式 (Standard)
+  - OPPO VIP 模式 (特殊读写策略)
+  - 小米 MiAuth 模式 (签名认证)
+
+- 🎨 **分区风险提示**
+  - 关键分区红色警告 (xbl, abl, aop)
+  - 危险分区橙色警告 (boot, recovery)
+  - 系统分区黄色提示 (system, vendor)
+  - 用户数据绿色标识
+
 ### 核心功能
 
 - 📱 **智能设备检测**
   - 自动识别 ADB/Fastboot/EDL 设备
   - 实时设备状态监控
   - 多设备同时管理
+  - Sahara V2/V3 协议支持
 
 - 🔧 **EDL 模式刷写**
   - 支持高通 9008 模式刷机
-  - Sahara 协议通信
-  - Firehose 协议刷写
+  - Sahara 协议智能握手
+  - Firehose 协议增强刷写
   - GPT 分区表备份/恢复
   - 内存读写操作
+  - 自动存储类型检测 (eMMC/UFS/NAND)
 
 - ⚡ **Fastboot 增强**
   - 分区读写操作
@@ -108,14 +143,17 @@
 - 📦 **固件工具**
   - Payload.bin 提取
   - Super 分区合并
-  - 稀疏镜像处理
+  - Sparse/Raw 镜像处理和转换
   - 分区镜像提取
+  - rawprogram XML 解析
 
 ### 高级特性
 
-- 📝 **详细日志** - 操作日志记录与导出
+- 📝 **专业日志系统** - 彩色格式化输出与导出
 - 🌐 **多语言支持** - 中文/英文界面
 - 🎨 **现代 UI** - 基于 AntdUI 框架
+- 🔄 **自动重试** - 失败操作自动重试
+- 📊 **进度显示** - 实时刷写进度和速度
 
 <a id="requirements"></a>
 ## 📋 系统要求
@@ -156,11 +194,28 @@
 
 ### 使用示例
 
+#### 🔐 OFP/OZIP 固件解密
+1. 点击"选择固件"按钮
+2. 选择 `.ofp` / `.ozip` / `.ops` 文件
+3. 程序自动检测并解密固件
+4. 解密后自动加载分区表
+
+#### 🚀 智能一键刷机
+1. 选择固件目录或 XML 配置文件
+2. 设备进入 EDL 模式 (关机状态按住音量键连接)
+3. 程序自动完成：
+   - Sahara 握手和 Loader 加载
+   - Firehose 配置
+   - 分区表读取和验证
+   - 分区写入
+4. 等待刷写完成
+
 #### EDL 模式刷机
 1. 设备进入 9008 模式
 2. 选择 Programmer 文件（.mbn/.elf）
 3. 选择固件包或分区镜像
-4. 点击"开始刷写"
+4. 选择认证模式（标准/VIP/小米）
+5. 点击"开始刷写"
 
 #### Fastboot 操作
 1. 设备进入 Fastboot 模式
@@ -172,10 +227,21 @@
 2. 选择输出目录
 3. 点击"提取 Payload"
 
+#### 📱 读取设备信息
+1. 设备进入 EDL 模式
+2. 完成 Sahara 握手
+3. 点击"读取分区表"
+4. 程序自动读取并显示：
+   - 设备型号、厂商
+   - Android 版本
+   - 安全补丁级别
+   - 分区详情和文件系统类型
+
 <a id="documentation"></a>
 ## 📚 文档
 
 ### 核心文档
+- **[功能详解](docs/FEATURES.md)** 🆕 - v2.0 新功能完整指南
 - **[快速参考指南](docs/QUICK_REFERENCE.md)** ⭐ - 常用操作速查手册
 - **[开发指南](DEVELOPMENT.md)** - 项目结构和开发规范
 - **[贡献指南](CONTRIBUTING.md)** - 如何参与项目贡献
@@ -203,11 +269,41 @@
 <a id="tech-stack"></a>
 ## 🛠️ 技术栈
 
+- **运行时**: .NET Framework 4.8
 - **UI 框架**: [AntdUI](https://gitee.com/antdui/AntdUI) 2.2.1
 - **压缩库**: SharpZipLib 1.4.2
 - **JSON**: System.Text.Json 8.0.5 / Newtonsoft.Json 13.0.4
 - **Protobuf**: Google.Protobuf 3.17.3
-- **加密**: Fody / Costura
+- **加密**: System.Security.Cryptography (AES-128-CFB/ECB)
+- **打包**: Fody / Costura
+
+### 项目结构
+
+```
+MultiFlash-Tool/
+├── Authentication/          # 认证策略
+│   ├── IAuthStrategy.cs
+│   ├── StandardAuthStrategy.cs
+│   ├── XiaomiAuthStrategy.cs
+│   └── OppoVipDeviceStrategy.cs
+├── Qualcomm/               # 高通协议实现
+│   ├── SaharaProtocol.cs   # Sahara 协议
+│   ├── FirehoseProtocol.cs # Firehose 协议
+│   ├── FirehoseEnhanced.cs # Firehose 增强
+│   ├── OFPDecryptor.cs     # OFP 解密器
+│   ├── OFPKeyBruteForce.cs # 密钥爆破
+│   ├── DeviceInfoReader.cs # 设备信息读取
+│   ├── SparseImageHandler.cs # 镜像处理
+│   └── QualcommDatabase.cs # 设备数据库
+├── Services/               # 服务层
+│   ├── SmartFlashService.cs # 智能刷机
+│   ├── FlashTaskExecutor.cs # 刷写执行
+│   ├── PrettyLogger.cs     # 日志系统
+│   └── ConfigManager.cs    # 配置管理
+├── Strategies/             # 设备策略
+├── Localization/           # 多语言
+└── FastbootEnhance/        # Fastboot 增强
+```
 
 <a id="faq"></a>
 ## ❓ 常见问题

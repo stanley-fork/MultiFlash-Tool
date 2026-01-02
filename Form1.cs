@@ -1,4 +1,4 @@
-﻿using AntdUI;
+using AntdUI;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -78,7 +78,225 @@ namespace OPFlashTool
             "keymaster", "keymasterbak", "hyp", "hypbak", "storsec"
         };
 
+        #region 分区风险等级和颜色定义
+
+        /// <summary>
+        /// 分区风险等级
+        /// </summary>
+        private enum PartitionRiskLevel
+        {
+            Critical,    // 🔴 严重危险 - 损坏将变砖 (xbl, tz, hyp, rpm 等)
+            Dangerous,   // 🟠 危险 - 可能无法开机 (modem, fsg, persist)
+            Important,   // 🟡 重要 - 系统关键 (boot, recovery, vbmeta)
+            System,      // 🔵 系统 - 系统分区 (system, vendor, product)
+            UserData,    // 🟣 用户数据 - 用户资料 (userdata, cache)
+            Partition,   // ⚫ 分区表 - GPT 相关
+            Normal       // ⚪ 普通 - 其他分区
+        }
+
+        /// <summary>
+        /// 分区风险等级颜色映射 (行背景色)
+        /// </summary>
+        private static readonly Dictionary<PartitionRiskLevel, Color> PartitionRiskBackColors = new Dictionary<PartitionRiskLevel, Color>
+        {
+            [PartitionRiskLevel.Critical] = Color.FromArgb(255, 230, 230),    // 淡红色背景
+            [PartitionRiskLevel.Dangerous] = Color.FromArgb(255, 243, 224),   // 淡橙色背景
+            [PartitionRiskLevel.Important] = Color.FromArgb(255, 253, 231),   // 淡黄色背景
+            [PartitionRiskLevel.System] = Color.FromArgb(227, 242, 253),      // 淡蓝色背景
+            [PartitionRiskLevel.UserData] = Color.FromArgb(243, 229, 245),    // 淡紫色背景
+            [PartitionRiskLevel.Partition] = Color.FromArgb(232, 232, 232),   // 淡灰色背景
+            [PartitionRiskLevel.Normal] = Color.White                         // 白色背景
+        };
+
+        /// <summary>
+        /// 分区风险等级文字颜色映射
+        /// </summary>
+        private static readonly Dictionary<PartitionRiskLevel, Color> PartitionRiskForeColors = new Dictionary<PartitionRiskLevel, Color>
+        {
+            [PartitionRiskLevel.Critical] = Color.FromArgb(183, 28, 28),      // 深红色
+            [PartitionRiskLevel.Dangerous] = Color.FromArgb(230, 81, 0),      // 深橙色
+            [PartitionRiskLevel.Important] = Color.FromArgb(245, 127, 23),    // 琥珀色
+            [PartitionRiskLevel.System] = Color.FromArgb(21, 101, 192),       // 蓝色
+            [PartitionRiskLevel.UserData] = Color.FromArgb(106, 27, 154),     // 紫色
+            [PartitionRiskLevel.Partition] = Color.FromArgb(66, 66, 66),      // 深灰色
+            [PartitionRiskLevel.Normal] = Color.Black                         // 黑色
+        };
+
+        /// <summary>
+        /// 严重危险分区 - 损坏将导致设备变砖，无法通过软件修复
+        /// </summary>
+        private static readonly HashSet<string> CriticalPartitions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            // Qualcomm 启动链
+            "xbl", "xbl_a", "xbl_b", "xblbak", "xbl_config", "xbl_config_a", "xbl_config_b",
+            "pbl", "sbl1", "sbl1bak",
+            // TrustZone 安全分区
+            "tz", "tz_a", "tz_b", "tzbak",
+            // Hypervisor
+            "hyp", "hyp_a", "hyp_b", "hypbak",
+            // 电源管理
+            "rpm", "rpm_a", "rpm_b", "rpmbak",
+            // 安全启动
+            "keymaster", "keymaster_a", "keymaster_b", "keymasterbak",
+            "cmnlib", "cmnlib_a", "cmnlib_b", "cmnlibbak",
+            "cmnlib64", "cmnlib64_a", "cmnlib64_b", "cmnlib64bak",
+            "devcfg", "devcfg_a", "devcfg_b", "devcfgbak",
+            // 存储安全
+            "storsec", "storsec_a", "storsec_b",
+            // DDR 配置
+            "ddr", "cdt", "limits", "limits-cdsp",
+            // 早期阶段分区
+            "aop", "aop_a", "aop_b", "aopbak",
+            "qupfw", "qupfw_a", "qupfw_b",
+            "uefi", "uefi_a", "uefi_b",
+            "uefisecapp", "uefisecapp_a", "uefisecapp_b",
+            // OPPO/Realme/OnePlus 特殊
+            "DRIVER", "oplusreserve1", "oplusreserve2"
+        };
+
+        /// <summary>
+        /// 危险分区 - 损坏可能导致无法开机或丢失重要功能
+        /// </summary>
+        private static readonly HashSet<string> DangerousPartitions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            // 基带/调制解调器
+            "modem", "modem_a", "modem_b", "mdm", "mdm_a", "mdm_b",
+            "modemst1", "modemst2", "fsg", "fsc",
+            // DSP 处理器
+            "dsp", "dsp_a", "dsp_b",
+            "cdsp", "cdsp_a", "cdsp_b",
+            "adsp", "adsp_a", "adsp_b",
+            // ABL (应用启动加载器)
+            "abl", "abl_a", "abl_b", "ablbak",
+            // 持久化数据
+            "persist", "persistbak", "persist_a", "persist_b",
+            // 蓝牙/WiFi 固件
+            "bluetooth", "bluetooth_a", "bluetooth_b",
+            // IMEI/EFS
+            "efs", "efs1", "efs2", "efsc", "efsg",
+            // 安全相关
+            "sec", "ssd", "devinfo",
+            // 小米特殊
+            "cust", "cust_a", "cust_b"
+        };
+
+        /// <summary>
+        /// 重要系统分区 - 损坏可能导致系统无法启动
+        /// </summary>
+        private static readonly HashSet<string> ImportantPartitions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            // 启动镜像
+            "boot", "boot_a", "boot_b",
+            "recovery", "recovery_a", "recovery_b",
+            "init_boot", "init_boot_a", "init_boot_b",
+            "vendor_boot", "vendor_boot_a", "vendor_boot_b",
+            // AVB 验证
+            "vbmeta", "vbmeta_a", "vbmeta_b",
+            "vbmeta_system", "vbmeta_system_a", "vbmeta_system_b",
+            "vbmeta_vendor", "vbmeta_vendor_a", "vbmeta_vendor_b",
+            // 设备树
+            "dtbo", "dtbo_a", "dtbo_b",
+            // Splash
+            "splash", "logo", "logo_a", "logo_b",
+            // Misc
+            "misc",
+            // FRP
+            "frp", "config"
+        };
+
+        /// <summary>
+        /// 系统分区 - 操作系统核心
+        /// </summary>
+        private static readonly HashSet<string> SystemPartitions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            // Android 系统
+            "system", "system_a", "system_b",
+            "system_ext", "system_ext_a", "system_ext_b",
+            "vendor", "vendor_a", "vendor_b",
+            "product", "product_a", "product_b",
+            "odm", "odm_a", "odm_b",
+            // 动态分区容器
+            "super",
+            // OEM
+            "oem", "oem_a", "oem_b",
+            "oppo", "oneplus", "my_product"
+        };
+
+        /// <summary>
+        /// 用户数据分区
+        /// </summary>
+        private static readonly HashSet<string> UserDataPartitions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "userdata", "cache", "metadata"
+        };
+
+        /// <summary>
+        /// GPT 分区表相关
+        /// </summary>
+        private static readonly HashSet<string> GptPartitions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "gpt", "gpt_main0", "gpt_main1", "gpt_backup0", "gpt_backup1",
+            "PrimaryGPT", "BackupGPT", "gpt_both0", "gpt_both1",
+            "ALIGN_TO_128K_1", "ALIGN_TO_128K_2", "grow"
+        };
+
+        /// <summary>
+        /// 获取分区的风险等级
+        /// </summary>
+        private PartitionRiskLevel GetPartitionRiskLevel(string partitionName)
+        {
+            if (string.IsNullOrEmpty(partitionName))
+                return PartitionRiskLevel.Normal;
+
+            // 检查 GPT
+            if (GptPartitions.Contains(partitionName) || 
+                partitionName.IndexOf("gpt", StringComparison.OrdinalIgnoreCase) >= 0)
+                return PartitionRiskLevel.Partition;
+
+            // 检查严重危险
+            if (CriticalPartitions.Contains(partitionName))
+                return PartitionRiskLevel.Critical;
+
+            // 检查危险
+            if (DangerousPartitions.Contains(partitionName))
+                return PartitionRiskLevel.Dangerous;
+
+            // 检查重要
+            if (ImportantPartitions.Contains(partitionName))
+                return PartitionRiskLevel.Important;
+
+            // 检查系统
+            if (SystemPartitions.Contains(partitionName))
+                return PartitionRiskLevel.System;
+
+            // 检查用户数据
+            if (UserDataPartitions.Contains(partitionName))
+                return PartitionRiskLevel.UserData;
+
+            return PartitionRiskLevel.Normal;
+        }
+
+        /// <summary>
+        /// 获取分区风险等级的中文描述
+        /// </summary>
+        private string GetRiskLevelDescription(PartitionRiskLevel level)
+        {
+            return level switch
+            {
+                PartitionRiskLevel.Critical => "🔴 严重危险",
+                PartitionRiskLevel.Dangerous => "🟠 危险",
+                PartitionRiskLevel.Important => "🟡 重要",
+                PartitionRiskLevel.System => "🔵 系统",
+                PartitionRiskLevel.UserData => "🟣 用户数据",
+                PartitionRiskLevel.Partition => "⚫ 分区表",
+                _ => "⚪ 普通"
+            };
+        }
+
+        #endregion
+
         private bool isGptRead;
+        private bool hasXmlPartitions; // 从 XML 加载了分区数据
         private static readonly string SystemDirectory = Environment.SystemDirectory;
         private bool _result;
 
@@ -306,6 +524,20 @@ namespace OPFlashTool
                 listView1.FullRowSelect = true;
                 listView1.MouseDoubleClick -= listView1_MouseDoubleClick;
                 listView1.MouseDoubleClick += listView1_MouseDoubleClick;
+                
+                // 确保列顺序正确 (DisplayIndex)
+                // 列顺序: Name, Lun, Size, Start, Sectors, FS, Fmt, File
+                if (listView1.Columns.Count >= 8)
+                {
+                    listView1.Columns[0].DisplayIndex = 0; // Name
+                    listView1.Columns[1].DisplayIndex = 1; // Lun
+                    listView1.Columns[2].DisplayIndex = 2; // Size
+                    listView1.Columns[3].DisplayIndex = 3; // Start
+                    listView1.Columns[4].DisplayIndex = 4; // Sectors
+                    listView1.Columns[5].DisplayIndex = 5; // FS
+                    listView1.Columns[6].DisplayIndex = 6; // Fmt
+                    listView1.Columns[7].DisplayIndex = 7; // File
+                }
             }
 
             if (listView2 != null)
@@ -571,6 +803,160 @@ namespace OPFlashTool
         // 蓝色：信息/操作日志
         private void LogInfo(string msg) => AppendLog(msg, Color.Blue);
 
+        #region 增强格式化日志
+
+        // 日志颜色定义
+        private static readonly Color LogColorOk = Color.FromArgb(46, 125, 50);       // 深绿色
+        private static readonly Color LogColorFail = Color.FromArgb(198, 40, 40);     // 深红色
+        private static readonly Color LogColorWait = Color.FromArgb(30, 136, 229);    // 蓝色
+        private static readonly Color LogColorSection = Color.FromArgb(156, 39, 176); // 紫色
+        private static readonly Color LogColorDevice = Color.FromArgb(0, 121, 107);   // 青色
+        private static readonly Color LogColorValue = Color.FromArgb(33, 33, 33);     // 深灰色
+        private static readonly Color LogColorCritical = Color.FromArgb(183, 28, 28); // 红色(严重)
+        private static readonly Color LogColorDanger = Color.FromArgb(230, 81, 0);    // 橙色(危险)
+
+        /// <summary>
+        /// 输出带状态的操作日志 (action :Ok 或 :Failed)
+        /// </summary>
+        private void LogStatus(string action, bool success, string details = null)
+        {
+            string status = success ? ":Ok" : ":Failed";
+            string message = string.IsNullOrEmpty(details) ? $"{action} {status}" : $"{action} {status} ({details})";
+            AppendLog(message, success ? LogColorOk : LogColorFail);
+        }
+
+        /// <summary>
+        /// 输出等待状态日志 (action ...)
+        /// </summary>
+        private void LogWaiting(string action, string details = null)
+        {
+            string message = string.IsNullOrEmpty(details) ? $"{action} ..." : $"{action} ({details})...";
+            AppendLog(message, LogColorWait);
+        }
+
+        /// <summary>
+        /// 输出章节标题 (▶️ title)
+        /// </summary>
+        private void LogSection(string title)
+        {
+            AppendLog($"▶️ {title}", LogColorSection);
+        }
+
+        /// <summary>
+        /// 输出键值对日志 (• key : value)
+        /// </summary>
+        private void LogKeyValue(string key, string value, bool indent = true)
+        {
+            string prefix = indent ? "  • " : "• ";
+            AppendLog($"{prefix}{key} : {value}", LogColorValue);
+        }
+
+        /// <summary>
+        /// 输出设备信息项
+        /// </summary>
+        private void LogDeviceInfo(string label, string value)
+        {
+            AppendLog($"  {label,-16} :{value}", LogColorDevice);
+        }
+
+        /// <summary>
+        /// 输出分隔线
+        /// </summary>
+        private void LogSeparator(char ch = '═', int length = 50)
+        {
+            AppendLog(new string(ch, length), Color.Gray);
+        }
+
+        /// <summary>
+        /// 输出分区操作日志（带风险等级颜色）
+        /// </summary>
+        private void LogPartitionOperation(string operation, string partitionName, bool success = true, string details = null)
+        {
+            var riskLevel = GetPartitionRiskLevel(partitionName);
+            var riskColor = riskLevel switch
+            {
+                PartitionRiskLevel.Critical => LogColorCritical,
+                PartitionRiskLevel.Dangerous => LogColorDanger,
+                _ => success ? LogColorOk : LogColorFail
+            };
+            
+            string riskIcon = riskLevel switch
+            {
+                PartitionRiskLevel.Critical => "🔴",
+                PartitionRiskLevel.Dangerous => "🟠",
+                PartitionRiskLevel.Important => "🟡",
+                PartitionRiskLevel.System => "🔵",
+                PartitionRiskLevel.UserData => "🟣",
+                PartitionRiskLevel.Partition => "⚫",
+                _ => "⚪"
+            };
+
+            string status = success ? ":Ok" : ":Failed";
+            string message = $"[{operation}] {riskIcon} {partitionName} {status}";
+            if (!string.IsNullOrEmpty(details))
+                message += $" ({details})";
+                
+            AppendLog(message, riskColor);
+        }
+
+        /// <summary>
+        /// 输出危险操作警告
+        /// </summary>
+        private void LogDangerWarning(string partitionName, string operation)
+        {
+            var riskLevel = GetPartitionRiskLevel(partitionName);
+            if (riskLevel == PartitionRiskLevel.Critical)
+            {
+                AppendLog($"⚠️ 严重警告: 分区 [{partitionName}] 是关键启动分区，{operation}可能导致设备变砖！", LogColorCritical);
+            }
+            else if (riskLevel == PartitionRiskLevel.Dangerous)
+            {
+                AppendLog($"⚠️ 警告: 分区 [{partitionName}] 包含重要数据，{operation}可能导致功能异常！", LogColorDanger);
+            }
+        }
+
+        /// <summary>
+        /// 输出分区表摘要（带颜色统计）
+        /// </summary>
+        private void LogPartitionSummary(List<PartitionInfo> partitions)
+        {
+            // 统计各风险等级的分区数量
+            int critical = 0, dangerous = 0, important = 0, system = 0, userData = 0, gpt = 0, normal = 0;
+            
+            foreach (var part in partitions)
+            {
+                var level = GetPartitionRiskLevel(part.Name);
+                switch (level)
+                {
+                    case PartitionRiskLevel.Critical: critical++; break;
+                    case PartitionRiskLevel.Dangerous: dangerous++; break;
+                    case PartitionRiskLevel.Important: important++; break;
+                    case PartitionRiskLevel.System: system++; break;
+                    case PartitionRiskLevel.UserData: userData++; break;
+                    case PartitionRiskLevel.Partition: gpt++; break;
+                    default: normal++; break;
+                }
+            }
+
+            LogSection("分区风险统计");
+            if (critical > 0)
+                AppendLog($"  🔴 严重危险: {critical} 个 (损坏将变砖)", LogColorCritical);
+            if (dangerous > 0)
+                AppendLog($"  🟠 危险: {dangerous} 个 (可能无法开机)", LogColorDanger);
+            if (important > 0)
+                AppendLog($"  🟡 重要: {important} 个 (系统关键)", Color.FromArgb(245, 127, 23));
+            if (system > 0)
+                AppendLog($"  🔵 系统: {system} 个 (操作系统)", Color.FromArgb(21, 101, 192));
+            if (userData > 0)
+                AppendLog($"  🟣 用户数据: {userData} 个", Color.FromArgb(106, 27, 154));
+            if (gpt > 0)
+                AppendLog($"  ⚫ 分区表: {gpt} 个", Color.FromArgb(66, 66, 66));
+            if (normal > 0)
+                AppendLog($"  ⚪ 普通: {normal} 个", Color.Black);
+        }
+
+        #endregion
+
         // Fastboot 日志必须走统一通道，否则会被 RebuildAllLogs 清除
         private void AppendFastbootLog(string message)
         {
@@ -787,24 +1173,186 @@ namespace OPFlashTool
                 return;
             }
 
-            AppendLog("[DevInfo] 获取设备信息...", Color.Blue);
+            LogSection("获取设备信息");
             await RunEdlOperationAsync(port, async (firehose) =>
             {
+                // 1. 获取 Firehose 基本信息
                 var info = firehose.GetDeviceInfo();
                 if (info.Count > 0)
                 {
-                    AppendLog("=== 设备信息 ===", Color.Green);
+                    LogSection("Firehose 配置");
                     foreach (var kv in info)
                     {
-                        AppendLog($"  {kv.Key}: {kv.Value}", Color.Black);
+                        LogKeyValue(kv.Key, kv.Value);
+                    }
+                }
+
+                // 2. 读取 GPT 分区表
+                if (!isGptRead)
+                {
+                    LogWaiting("读取分区表");
+                    var partitions = await ReadGptFromDeviceAsync(firehose);
+                    if (partitions == null || partitions.Count == 0)
+                    {
+                        LogStatus("读取分区表", false, "无法获取分区信息");
+                        return;
+                    }
+                    UpdatePartitionList(partitions);
+                    isGptRead = true;
+                }
+
+                // 3. 使用 DeviceInfoReader 读取 Android 设备信息
+                var partitionList = GetPartitionListFromListView();
+                if (partitionList.Count > 0)
+                {
+                    LogSection("读取 Android 设备信息");
+                    var reader = new Qualcomm.DeviceInfoReader(firehose, (msg) => AppendLog(msg, Color.Gray));
+                    
+                    try
+                    {
+                        var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+                        var buildProps = await reader.ReadBuildPropsAsync(partitionList, cts.Token);
+                        
+                        if (buildProps != null && !string.IsNullOrEmpty(buildProps.Brand))
+                        {
+                            LogSection("Android 系统信息");
+                            if (!string.IsNullOrEmpty(buildProps.Brand))
+                                LogDeviceInfo("品牌", buildProps.Brand);
+                            if (!string.IsNullOrEmpty(buildProps.Model))
+                                LogDeviceInfo("型号", buildProps.Model);
+                            if (!string.IsNullOrEmpty(buildProps.Device))
+                                LogDeviceInfo("设备代号", buildProps.Device);
+                            if (!string.IsNullOrEmpty(buildProps.Product))
+                                LogDeviceInfo("产品", buildProps.Product);
+                            if (!string.IsNullOrEmpty(buildProps.Manufacturer))
+                                LogDeviceInfo("制造商", buildProps.Manufacturer);
+                            if (!string.IsNullOrEmpty(buildProps.AndroidVersion))
+                                LogDeviceInfo("Android 版本", buildProps.AndroidVersion);
+                            if (!string.IsNullOrEmpty(buildProps.SdkVersion))
+                                LogDeviceInfo("SDK 版本", buildProps.SdkVersion);
+                            if (!string.IsNullOrEmpty(buildProps.SecurityPatch))
+                                LogDeviceInfo("安全补丁", buildProps.SecurityPatch);
+                            if (!string.IsNullOrEmpty(buildProps.BuildId))
+                                LogDeviceInfo("Build ID", buildProps.BuildId);
+                            if (!string.IsNullOrEmpty(buildProps.RomVersion))
+                                LogDeviceInfo("ROM 版本", buildProps.RomVersion);
+                            if (!string.IsNullOrEmpty(buildProps.Incremental))
+                                LogDeviceInfo("版本号", buildProps.Incremental);
+                            if (!string.IsNullOrEmpty(buildProps.BuildFingerprint))
+                                LogDeviceInfo("Fingerprint", buildProps.BuildFingerprint);
+                            
+                            LogStatus("读取 Android 设备信息", true);
+                        }
+                        else
+                        {
+                            LogStatus("读取 Android 设备信息", false, "无法解析 build.prop");
+                            LogWarning("提示: 设备可能使用了加密或不支持的文件系统");
+                        }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        LogStatus("读取 Android 设备信息", false, "操作超时");
+                    }
+                    catch (Exception ex)
+                    {
+                        LogStatus("读取 Android 设备信息", false, ex.Message);
                     }
                 }
                 else
                 {
-                    AppendLog("[DevInfo] 无法获取设备信息", Color.Orange);
+                    LogWarning("未获取到分区列表，无法读取 Android 信息");
                 }
-                await Task.CompletedTask;
             });
+        }
+
+        /// <summary>
+        /// 从 ListView 获取当前分区列表
+        /// </summary>
+        private List<PartitionInfo> GetPartitionListFromListView()
+        {
+            var partitions = new List<PartitionInfo>();
+            if (listView1.InvokeRequired)
+            {
+                listView1.Invoke(new Action(() =>
+                {
+                    foreach (ListViewItem item in listView1.Items)
+                    {
+                        if (item.Tag is PartitionInfo part)
+                        {
+                            partitions.Add(part);
+                        }
+                    }
+                }));
+            }
+            else
+            {
+                foreach (ListViewItem item in listView1.Items)
+                {
+                    if (item.Tag is PartitionInfo part)
+                    {
+                        partitions.Add(part);
+                    }
+                }
+            }
+            return partitions;
+        }
+
+        /// <summary>
+        /// 从设备读取 GPT 分区表
+        /// </summary>
+        private async Task<List<PartitionInfo>> ReadGptFromDeviceAsync(FirehoseClient firehose)
+        {
+            var partitions = new List<PartitionInfo>();
+            string tempDir = Path.Combine(Path.GetTempPath(), $"gpt_{Guid.NewGuid():N}");
+            
+            try
+            {
+                Directory.CreateDirectory(tempDir);
+                
+                // 尝试读取所有 LUN 的 GPT
+                string storageType = firehose.StorageType ?? "ufs";
+                int maxLun = storageType.Equals("ufs", StringComparison.OrdinalIgnoreCase) ? 6 : 1;
+                int sectorSize = firehose.SectorSize > 0 ? firehose.SectorSize : 4096;
+                
+                var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                
+                for (int lun = 0; lun < maxLun; lun++)
+                {
+                    string gptPath = Path.Combine(tempDir, $"gpt_lun{lun}.bin");
+                    
+                    // 读取 GPT (前 34 个扇区)
+                    bool success = await firehose.ReadPartitionChunkedAsync(
+                        gptPath, "0", 34, lun.ToString(),
+                        null, cts.Token, $"GPT_LUN{lun}", null, false, true);
+                    
+                    if (!success || !File.Exists(gptPath))
+                    {
+                        continue;
+                    }
+                    
+                    // 解析 GPT
+                    var parsed = GptParser.ParseGptFile(gptPath, lun);
+                    foreach (var p in parsed)
+                    {
+                        p.Source = PartitionSource.Device;
+                        p.SourceFile = $"LUN{lun}";
+                        p.SectorSize = sectorSize;
+                        partitions.Add(p);
+                    }
+                    
+                    AppendLog($"  LUN{lun}: {parsed.Count} 个分区", Color.Gray);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"读取 GPT 失败: {ex.Message}");
+            }
+            finally
+            {
+                try { if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true); } catch { }
+            }
+            
+            return partitions;
         }
         
         private async Task PeekMemoryAsync()
@@ -2312,10 +2860,10 @@ namespace OPFlashTool
         {
             using (OpenFileDialog openFileDialog = new OpenFileDialog())
             {
-                openFileDialog.Filter = "rawprogram XML|rawprogram*.xml|XML 文件|*.xml|所有文件|*.*";
+                openFileDialog.Filter = "固件文件|rawprogram*.xml;*.ofp;*.ozip;*.ops|rawprogram XML|rawprogram*.xml|OFP 加密固件|*.ofp|OZIP 加密固件|*.ozip|OPS 固件 (OnePlus)|*.ops|XML 文件|*.xml|所有文件|*.*";
                 openFileDialog.FilterIndex = 1;
-                openFileDialog.Title = "选择 rawprogram XML";
-                openFileDialog.Multiselect = true; // 开启多选功能
+                openFileDialog.Title = "选择固件 (rawprogram XML / OFP / OZIP / OPS)";
+                openFileDialog.Multiselect = true;
                 openFileDialog.RestoreDirectory = true;
                 if (!string.IsNullOrEmpty(currentFirmwareFolder) && Directory.Exists(currentFirmwareFolder))
                 {
@@ -2327,13 +2875,38 @@ namespace OPFlashTool
                     return;
                 }
 
-                string selectedRawprogram = openFileDialog.FileName;
-                if (string.IsNullOrEmpty(selectedRawprogram) || !File.Exists(selectedRawprogram))
+                string selectedFile = openFileDialog.FileName;
+                if (string.IsNullOrEmpty(selectedFile) || !File.Exists(selectedFile))
                 {
-                    ShowWarnMessage("请选择有效的 rawprogram XML 文件");
+                    ShowWarnMessage("请选择有效的固件文件");
                     return;
                 }
 
+                // 检测固件类型并处理加密固件包 (OFP/OZIP/OPS)
+                var firmwareType = Qualcomm.OFPDecryptor.DetectFirmwareType(selectedFile);
+                if (firmwareType != Qualcomm.OFPDecryptor.FirmwareType.Unknown)
+                {
+                    string typeStr = firmwareType switch
+                    {
+                        Qualcomm.OFPDecryptor.FirmwareType.OFP => "OFP",
+                        Qualcomm.OFPDecryptor.FirmwareType.OZIP => "OZIP",
+                        Qualcomm.OFPDecryptor.FirmwareType.OPS => "OPS",
+                        _ => "加密"
+                    };
+                    // 异步处理加密固件解密
+                    SafeExecuteAsync(async () => await LoadEncryptedFirmwareAsync(selectedFile, firmwareType), $"加载 {typeStr} 固件");
+                    return;
+                }
+                
+                // 如果扩展名是 .ofp/.ozip/.ops 但未检测到，也尝试解密
+                string ext = Path.GetExtension(selectedFile).ToLower();
+                if (ext == ".ofp" || ext == ".ozip" || ext == ".ops")
+                {
+                    SafeExecuteAsync(async () => await LoadEncryptedFirmwareAsync(selectedFile, Qualcomm.OFPDecryptor.FirmwareType.Unknown), "加载加密固件");
+                    return;
+                }
+
+                string selectedRawprogram = selectedFile;
                 currentFirmwareFolder = Path.GetDirectoryName(selectedRawprogram) ?? string.Empty;
 
                 var allRawFiles = Directory.GetFiles(currentFirmwareFolder, "rawprogram*.xml", SearchOption.TopDirectoryOnly);
@@ -2403,17 +2976,444 @@ namespace OPFlashTool
                             p.Sectors = (ulong)xp.NumSectors;
                             p.SectorSize = xp.SectorSize;
                             p.FileName = xp.FileName;
+                            p.Source = PartitionSource.XmlFile;
+                            p.SourceFile = rawFile;
                             allPartitions.Add(p);
                         }
                     }
 
+                    // 检测镜像文件的文件系统类型和格式
+                    string imagesDir = Path.GetDirectoryName(rawFiles.First());
+                    int detectedCount = 0;
+                    foreach (var part in allPartitions)
+                    {
+                        if (!string.IsNullOrEmpty(part.FileName))
+                        {
+                            string imagePath = Path.Combine(imagesDir, part.FileName);
+                            if (File.Exists(imagePath))
+                            {
+                                DetectPartitionImageFormat(part, imagePath);
+                                detectedCount++;
+                            }
+                        }
+                    }
+                    
+                    if (detectedCount > 0)
+                    {
+                        AppendLog($"已检测 {detectedCount} 个镜像文件的格式", Color.Blue);
+                    }
+
                     UpdatePartitionList(allPartitions);
-                    AppendLog($"已从 {rawFiles.Count} 个 rawprogram XML 解析分区表", Color.Green);
+                    hasXmlPartitions = true; // 标记已从 XML 加载分区数据
+                    LogStatus($"已从 {rawFiles.Count} 个 rawprogram XML 解析分区表", true);
+                    
+                    // 输出分区风险统计
+                    LogPartitionSummary(allPartitions);
                 }
                 catch (Exception ex)
                 {
                     ShowErrorMessage($"解析 XML 失败: {ex.Message}");
                 }
+            }
+        }
+
+        /// <summary>
+        /// 加载 OFP 加密固件包
+        /// </summary>
+        private async Task LoadOFPFirmwareAsync(string ofpPath)
+        {
+            LogSection("加载 OFP 加密固件");
+            LogKeyValue("文件", Path.GetFileName(ofpPath));
+            
+            // 创建临时解密目录
+            string tempDir = Path.Combine(Path.GetTempPath(), $"ofp_extract_{Guid.NewGuid():N}");
+            
+            try
+            {
+                // 创建解密器
+                var decryptor = new Qualcomm.OFPDecryptor(
+                    (msg) => AppendLog(msg, Color.Gray),
+                    (current, total) => { }
+                );
+                
+                _cts = new CancellationTokenSource();
+                
+                // 先快速提取 XML 文件
+                LogWaiting("解密固件包");
+                var result = await decryptor.ExtractXmlOnlyAsync(ofpPath, tempDir, _cts.Token);
+                
+                if (!result.Success)
+                {
+                    LogStatus("解密 OFP", false, result.Error);
+                    return;
+                }
+                
+                LogStatus("解密 OFP", true);
+                
+                // 检查是否找到 rawprogram XML
+                if (result.RawProgramXmlPaths.Count == 0)
+                {
+                    LogStatus("查找 rawprogram XML", false, "未找到分区配置文件");
+                    return;
+                }
+                
+                LogStatus($"找到 {result.RawProgramXmlPaths.Count} 个 rawprogram XML", true);
+                
+                // 设置固件目录
+                currentFirmwareFolder = tempDir;
+                
+                // 加载 patch 文件
+                currentPatchFiles.Clear();
+                foreach (var patchPath in result.PatchXmlPaths.OrderBy(p => GetPatchIndex(Path.GetFileName(p)) ?? int.MaxValue))
+                {
+                    currentPatchFiles.Add(patchPath);
+                }
+                
+                if (currentPatchFiles.Count > 0)
+                {
+                    var names = currentPatchFiles.Select(Path.GetFileName);
+                    LogKeyValue("Patch XML", string.Join(", ", names));
+                }
+                
+                // 显示主 XML 路径
+                string mainRawXml = result.RawProgramXmlPaths
+                    .FirstOrDefault(f => Path.GetFileName(f).Equals("rawprogram0.xml", StringComparison.OrdinalIgnoreCase))
+                    ?? result.RawProgramXmlPaths[0];
+                input5.Text = mainRawXml;
+                
+                // 解析分区表
+                var allPartitions = new List<PartitionInfo>();
+                
+                foreach (var rawFile in result.RawProgramXmlPaths.OrderBy(f => f))
+                {
+                    var xmlPartitions = XmlPartitionParser.Parse(rawFile);
+                    foreach (var xp in xmlPartitions)
+                    {
+                        var p = new PartitionInfo();
+                        int.TryParse(xp.Lun, out int lun);
+                        p.Lun = lun;
+                        p.Name = xp.Label;
+                        p.StartLbaStr = xp.StartSector;
+                        ulong.TryParse(xp.StartSector, out ulong startLba);
+                        p.StartLba = startLba;
+                        p.Sectors = (ulong)xp.NumSectors;
+                        p.SectorSize = xp.SectorSize;
+                        p.FileName = xp.FileName;
+                        p.Source = PartitionSource.XmlFile;
+                        p.SourceFile = rawFile;
+                        allPartitions.Add(p);
+                    }
+                }
+                
+                // 询问用户是否解密全部镜像文件
+                var dialogResult = MessageBox.Show(
+                    $"已解析 {allPartitions.Count} 个分区配置\n\n" +
+                    "是否解密全部镜像文件？\n" +
+                    "• 点击 [是] - 解密全部镜像 (可能需要较长时间)\n" +
+                    "• 点击 [否] - 仅使用 XML 配置 (稍后按需解密)\n" +
+                    "• 点击 [取消] - 取消操作",
+                    "OFP 固件解密",
+                    MessageBoxButtons.YesNoCancel,
+                    MessageBoxIcon.Question);
+                
+                if (dialogResult == DialogResult.Cancel)
+                {
+                    LogWarning("用户取消操作");
+                    return;
+                }
+                
+                if (dialogResult == DialogResult.Yes)
+                {
+                    // 解密全部镜像
+                    LogSection("解密全部镜像文件");
+                    var fullResult = await decryptor.ExtractAsync(ofpPath, tempDir, _cts.Token);
+                    
+                    if (fullResult.Success)
+                    {
+                        LogStatus($"解密完成，共 {fullResult.ExtractedFiles.Count} 个文件", true);
+                        
+                        // 检测镜像格式
+                        int detectedCount = 0;
+                        foreach (var part in allPartitions)
+                        {
+                            if (!string.IsNullOrEmpty(part.FileName))
+                            {
+                                string imagePath = Path.Combine(tempDir, part.FileName);
+                                if (File.Exists(imagePath))
+                                {
+                                    DetectPartitionImageFormat(part, imagePath);
+                                    detectedCount++;
+                                }
+                            }
+                        }
+                        
+                        if (detectedCount > 0)
+                        {
+                            LogKeyValue("检测镜像格式", $"{detectedCount} 个");
+                        }
+                    }
+                    else
+                    {
+                        LogWarning($"部分解密失败: {fullResult.Error}");
+                    }
+                }
+                
+                // 更新分区列表
+                UpdatePartitionList(allPartitions);
+                hasXmlPartitions = true; // 标记已从 OFP/XML 加载分区数据
+                LogStatus($"已加载 OFP 固件，共 {allPartitions.Count} 个分区", true);
+                
+                // 输出分区风险统计
+                LogPartitionSummary(allPartitions);
+                
+                // 记录临时目录供清理
+                _ofpTempDir = tempDir;
+            }
+            catch (OperationCanceledException)
+            {
+                LogWarning("操作已取消");
+                try { if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true); } catch { }
+            }
+            catch (Exception ex)
+            {
+                LogStatus("加载 OFP", false, ex.Message);
+                try { if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true); } catch { }
+            }
+        }
+
+        // OFP 临时解压目录
+        private string _ofpTempDir;
+
+        /// <summary>
+        /// 加载加密固件包 (支持 OFP/OZIP/OPS)
+        /// </summary>
+        private async Task LoadEncryptedFirmwareAsync(string firmwarePath, Qualcomm.OFPDecryptor.FirmwareType detectedType)
+        {
+            string typeStr = detectedType switch
+            {
+                Qualcomm.OFPDecryptor.FirmwareType.OFP => "OFP",
+                Qualcomm.OFPDecryptor.FirmwareType.OZIP => "OZIP",
+                Qualcomm.OFPDecryptor.FirmwareType.OPS => "OPS",
+                _ => "加密"
+            };
+            
+            LogSection($"加载 {typeStr} 固件包");
+            LogKeyValue("文件", Path.GetFileName(firmwarePath));
+            
+            // 创建临时解密目录
+            string tempDir = Path.Combine(Path.GetTempPath(), $"firmware_extract_{Guid.NewGuid():N}");
+            
+            try
+            {
+                // 创建解密器
+                var decryptor = new Qualcomm.OFPDecryptor(
+                    (msg) => AppendLog(msg, Color.Gray),
+                    (current, total) => { }
+                );
+                
+                _cts = new CancellationTokenSource();
+                
+                // 使用智能解密方法
+                LogWaiting("解密固件包");
+                Qualcomm.OFPExtractResult result;
+                
+                // 根据类型选择解密方法
+                if (detectedType == Qualcomm.OFPDecryptor.FirmwareType.OFP)
+                {
+                    // OFP: 先快速提取 XML
+                    result = await decryptor.ExtractXmlOnlyAsync(firmwarePath, tempDir, _cts.Token);
+                }
+                else
+                {
+                    // OZIP/OPS: 使用智能解密 (会解压全部文件)
+                    result = await decryptor.SmartExtractAsync(firmwarePath, tempDir, _cts.Token);
+                }
+                
+                if (!result.Success)
+                {
+                    LogStatus($"解密 {typeStr}", false, result.Error);
+                    return;
+                }
+                
+                LogStatus($"解密 {typeStr}", true);
+                
+                // 检查是否找到 rawprogram XML
+                if (result.RawProgramXmlPaths.Count == 0)
+                {
+                    // 尝试搜索解压目录中的 XML 文件
+                    var rawFiles = Directory.GetFiles(tempDir, "rawprogram*.xml", SearchOption.AllDirectories);
+                    result.RawProgramXmlPaths = rawFiles.ToList();
+                    
+                    var patchFiles = Directory.GetFiles(tempDir, "patch*.xml", SearchOption.AllDirectories);
+                    result.PatchXmlPaths = patchFiles.ToList();
+                }
+                
+                if (result.RawProgramXmlPaths.Count == 0)
+                {
+                    LogStatus("查找 rawprogram XML", false, "未找到分区配置文件");
+                    
+                    // 显示提取的文件列表供用户参考
+                    if (result.ExtractedFiles.Count > 0)
+                    {
+                        LogKeyValue("已提取文件", $"{result.ExtractedFiles.Count} 个");
+                        foreach (var f in result.ExtractedFiles.Take(10))
+                        {
+                            AppendLog($"  • {Path.GetFileName(f)}", Color.Gray);
+                        }
+                        if (result.ExtractedFiles.Count > 10)
+                        {
+                            AppendLog($"  ... 还有 {result.ExtractedFiles.Count - 10} 个文件", Color.Gray);
+                        }
+                    }
+                    return;
+                }
+                
+                LogStatus($"找到 {result.RawProgramXmlPaths.Count} 个 rawprogram XML", true);
+                
+                // 设置固件目录
+                currentFirmwareFolder = tempDir;
+                
+                // 加载 patch 文件
+                currentPatchFiles.Clear();
+                foreach (var patchPath in result.PatchXmlPaths.OrderBy(p => GetPatchIndex(Path.GetFileName(p)) ?? int.MaxValue))
+                {
+                    currentPatchFiles.Add(patchPath);
+                }
+                
+                if (currentPatchFiles.Count > 0)
+                {
+                    var names = currentPatchFiles.Select(Path.GetFileName);
+                    LogKeyValue("Patch XML", string.Join(", ", names));
+                }
+                
+                // 显示主 XML 路径
+                string mainRawXml = result.RawProgramXmlPaths
+                    .FirstOrDefault(f => Path.GetFileName(f).Equals("rawprogram0.xml", StringComparison.OrdinalIgnoreCase))
+                    ?? result.RawProgramXmlPaths[0];
+                input5.Text = mainRawXml;
+                
+                // 解析分区表
+                var allPartitions = new List<PartitionInfo>();
+                
+                foreach (var rawFile in result.RawProgramXmlPaths.OrderBy(f => f))
+                {
+                    var xmlPartitions = XmlPartitionParser.Parse(rawFile);
+                    foreach (var xp in xmlPartitions)
+                    {
+                        var p = new PartitionInfo();
+                        int.TryParse(xp.Lun, out int lun);
+                        p.Lun = lun;
+                        p.Name = xp.Label;
+                        p.StartLbaStr = xp.StartSector;
+                        ulong.TryParse(xp.StartSector, out ulong startLba);
+                        p.StartLba = startLba;
+                        p.Sectors = (ulong)xp.NumSectors;
+                        p.SectorSize = xp.SectorSize;
+                        p.FileName = xp.FileName;
+                        p.Source = PartitionSource.XmlFile;
+                        p.SourceFile = rawFile;
+                        allPartitions.Add(p);
+                    }
+                }
+                
+                // 检测镜像格式 (如果是 OZIP/OPS 已经解压了)
+                if (detectedType != Qualcomm.OFPDecryptor.FirmwareType.OFP)
+                {
+                    int detectedCount = 0;
+                    foreach (var part in allPartitions)
+                    {
+                        if (!string.IsNullOrEmpty(part.FileName))
+                        {
+                            string imagePath = Path.Combine(tempDir, part.FileName);
+                            if (File.Exists(imagePath))
+                            {
+                                DetectPartitionImageFormat(part, imagePath);
+                                detectedCount++;
+                            }
+                        }
+                    }
+                    
+                    if (detectedCount > 0)
+                    {
+                        LogKeyValue("检测镜像格式", $"{detectedCount} 个");
+                    }
+                }
+                else
+                {
+                    // OFP: 询问用户是否解密全部镜像文件
+                    var dialogResult = MessageBox.Show(
+                        $"已解析 {allPartitions.Count} 个分区配置\n\n" +
+                        "是否解密全部镜像文件？\n" +
+                        "• 点击 [是] - 解密全部镜像 (可能需要较长时间)\n" +
+                        "• 点击 [否] - 仅使用 XML 配置 (稍后按需解密)\n" +
+                        "• 点击 [取消] - 取消操作",
+                        "OFP 固件解密",
+                        MessageBoxButtons.YesNoCancel,
+                        MessageBoxIcon.Question);
+                    
+                    if (dialogResult == DialogResult.Cancel)
+                    {
+                        LogWarning("用户取消操作");
+                        return;
+                    }
+                    
+                    if (dialogResult == DialogResult.Yes)
+                    {
+                        // 解密全部镜像
+                        LogSection("解密全部镜像文件");
+                        var fullResult = await decryptor.ExtractAsync(firmwarePath, tempDir, _cts.Token);
+                        
+                        if (fullResult.Success)
+                        {
+                            LogStatus($"解密完成，共 {fullResult.ExtractedFiles.Count} 个文件", true);
+                            
+                            // 检测镜像格式
+                            int detectedCount = 0;
+                            foreach (var part in allPartitions)
+                            {
+                                if (!string.IsNullOrEmpty(part.FileName))
+                                {
+                                    string imagePath = Path.Combine(tempDir, part.FileName);
+                                    if (File.Exists(imagePath))
+                                    {
+                                        DetectPartitionImageFormat(part, imagePath);
+                                        detectedCount++;
+                                    }
+                                }
+                            }
+                            
+                            if (detectedCount > 0)
+                            {
+                                LogKeyValue("检测镜像格式", $"{detectedCount} 个");
+                            }
+                        }
+                        else
+                        {
+                            LogWarning($"部分解密失败: {fullResult.Error}");
+                        }
+                    }
+                }
+                
+                // 更新分区列表
+                UpdatePartitionList(allPartitions);
+                hasXmlPartitions = true; // 标记已从 XML 加载分区数据
+                LogStatus($"已加载 {typeStr} 固件，共 {allPartitions.Count} 个分区", true);
+                
+                // 输出分区风险统计
+                LogPartitionSummary(allPartitions);
+                
+                // 记录临时目录供清理
+                _ofpTempDir = tempDir;
+            }
+            catch (OperationCanceledException)
+            {
+                LogWarning("操作已取消");
+                try { if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true); } catch { }
+            }
+            catch (Exception ex)
+            {
+                LogStatus($"加载 {typeStr}", false, ex.Message);
+                try { if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true); } catch { }
             }
         }
 
@@ -2850,9 +3850,10 @@ namespace OPFlashTool
 
         private async void button5_Click(object sender, EventArgs e)
         {
-            if (!isGptRead)
+            // 检查是否有分区数据（从设备读取或从 XML 加载）
+            if (!isGptRead && !hasXmlPartitions)
             {
-                ShowWarnMessage("请先成功读取分区表 (GPT) 后再进行操作");
+                ShowWarnMessage("请先读取分区表或加载固件 XML 后再进行操作");
                 return;
             }
 
@@ -2943,14 +3944,14 @@ namespace OPFlashTool
                 signature,
                 async (executor) =>
                 {
-                    AppendLog("正在读取分区表...", Color.Black);
+                    LogSection("读取分区表");
+                    LogWaiting("读取 GPT");
                     var partitions = await executor.GetPartitionsAsync(_cts.Token);
 
                     if (!isGptRead)
                     {
-                        isGptRead = true; // [新增] 标记已读取
+                        isGptRead = true;
                         checkbox4.Checked = true;
-                        AppendLog("自由读写", Color.Green);
                     }
 
                     if (listView1.InvokeRequired)
@@ -2961,13 +3962,21 @@ namespace OPFlashTool
                     {
                         UpdatePartitionList(partitions);
                     }
+                    
+                    LogStatus($"读取分区表完成，共 {partitions.Count} 个分区", true);
+                    
+                    // 输出分区风险统计
+                    LogPartitionSummary(partitions);
 
                     if (checkbox7.Checked)
                     {
                         string xmlPath = Path.Combine(Application.StartupPath, "rawprogram0.xml");
                         XmlPartitionParser.GenerateXml(partitions, xmlPath);
-                        AppendLog($"已生成分区表 XML: {xmlPath}", Color.Green);
+                        LogStatus($"生成分区表 XML", true, xmlPath);
                     }
+                    
+                    // 自动读取 Android 设备信息 (build.prop)
+                    await ReadAndDisplayDeviceInfoAsync(executor.Client, partitions);
                 },
                 _cts.Token
             );
@@ -2978,12 +3987,91 @@ namespace OPFlashTool
             }
         }
 
+        /// <summary>
+        /// 读取并显示 Android 设备信息 (build.prop)
+        /// </summary>
+        private async Task ReadAndDisplayDeviceInfoAsync(FirehoseClient firehose, List<PartitionInfo> partitions)
+        {
+            if (firehose == null || partitions == null || partitions.Count == 0)
+                return;
+
+            try
+            {
+                LogSection("读取 Android 设备信息");
+                LogWaiting("解析 build.prop");
+                
+                var reader = new Qualcomm.DeviceInfoReader(firehose, (msg) => AppendLog(msg, Color.Gray));
+                var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+                
+                var buildProps = await reader.ReadBuildPropsAsync(partitions, cts.Token);
+                
+                if (buildProps != null && !string.IsNullOrEmpty(buildProps.Brand))
+                {
+                    LogSection("Android 系统信息");
+                    
+                    // 主要信息
+                    if (!string.IsNullOrEmpty(buildProps.Brand))
+                        LogDeviceInfo("品牌", buildProps.Brand);
+                    if (!string.IsNullOrEmpty(buildProps.Model))
+                        LogDeviceInfo("型号", buildProps.Model);
+                    if (!string.IsNullOrEmpty(buildProps.Device))
+                        LogDeviceInfo("设备代号", buildProps.Device);
+                    if (!string.IsNullOrEmpty(buildProps.Product))
+                        LogDeviceInfo("产品", buildProps.Product);
+                    if (!string.IsNullOrEmpty(buildProps.Manufacturer))
+                        LogDeviceInfo("制造商", buildProps.Manufacturer);
+                    
+                    // Android 版本信息
+                    if (!string.IsNullOrEmpty(buildProps.AndroidVersion))
+                        LogDeviceInfo("Android", buildProps.AndroidVersion + (string.IsNullOrEmpty(buildProps.SdkVersion) ? "" : $" (SDK {buildProps.SdkVersion})"));
+                    if (!string.IsNullOrEmpty(buildProps.SecurityPatch))
+                        LogDeviceInfo("安全补丁", buildProps.SecurityPatch);
+                    
+                    // 版本信息
+                    if (!string.IsNullOrEmpty(buildProps.BuildId))
+                        LogDeviceInfo("Build ID", buildProps.BuildId);
+                    if (!string.IsNullOrEmpty(buildProps.RomVersion))
+                        LogDeviceInfo("ROM 版本", buildProps.RomVersion);
+                    if (!string.IsNullOrEmpty(buildProps.Incremental))
+                        LogDeviceInfo("版本号", buildProps.Incremental);
+                    
+                    // Fingerprint (可能很长，截断显示)
+                    if (!string.IsNullOrEmpty(buildProps.BuildFingerprint))
+                    {
+                        string fp = buildProps.BuildFingerprint;
+                        if (fp.Length > 60)
+                            fp = fp.Substring(0, 57) + "...";
+                        LogDeviceInfo("Fingerprint", fp);
+                    }
+                    
+                    LogStatus("读取设备信息", true);
+                }
+                else
+                {
+                    LogStatus("读取设备信息", false, "无法解析 build.prop");
+                    LogWarning("提示: 设备可能使用加密或不支持的文件系统 (EROFS)");
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                LogStatus("读取设备信息", false, "操作超时");
+            }
+            catch (Exception ex)
+            {
+                LogStatus("读取设备信息", false, ex.Message);
+                Debug.WriteLine($"读取设备信息失败: {ex}");
+            }
+        }
+
         private void UpdatePartitionList(List<PartitionInfo> partitions)
         {
             ResetPartitionHighlight();
             listView1.BeginUpdate();
             listView1.Items.Clear();
             UpdatePartitionListGridLines();
+            // 用于调试的统计变量
+            int fsDetectedCount = 0;
+            
             foreach (var part in partitions)
             {
                 var item = new ListViewItem(part.Name);
@@ -2991,23 +4079,414 @@ namespace OPFlashTool
                 item.SubItems.Add(FormatFileSize(part.Sectors * (ulong)part.SectorSize));
                 item.SubItems.Add(part.StartLba.ToString());
                 item.SubItems.Add(part.Sectors.ToString());
-                item.SubItems.Add(part.FileName ?? string.Empty);
+                
+                // 文件系统类型和镜像格式
+                string fsDisplay = part.FileSystemShort ?? "-";
+                string fmtDisplay = part.ImageFormatShort ?? "-";
+                string fileDisplay = part.FileName ?? "";
+                
+                // 统计检测到的文件系统
+                if (part.FileSystem != PartitionFileSystem.Unknown && part.FileSystem != PartitionFileSystem.None)
+                {
+                    fsDetectedCount++;
+                }
+                
+                item.SubItems.Add(fsDisplay);   // 索引 5: FS
+                item.SubItems.Add(fmtDisplay);  // 索引 6: Fmt
+                item.SubItems.Add(fileDisplay); // 索引 7: File
+                
                 item.Tag = part;
                 ApplyPartitionFileState(item, part);
+                
+                // 根据文件系统类型设置颜色提示
+                SetPartitionItemColor(item, part);
+                
                 listView1.Items.Add(item);
+            }
+            
+            // 输出检测结果调试信息
+            if (fsDetectedCount == 0)
+            {
+                AppendLog($"提示: 未检测到任何文件系统类型 (FS列显示 '-')", Color.Orange);
             }
             listView1.EndUpdate();
             UpdatePartitionListGridLines();
             
             if (partitions.Count > 0)
             {
-                AppendLog($"读取分区表成功，共 {partitions.Count} 个分区", Color.Green);
+                // 统计信息
+                var fsCounts = partitions.GroupBy(p => p.FileSystem)
+                    .ToDictionary(g => g.Key, g => g.Count());
+                var formatCounts = partitions.GroupBy(p => p.ImageFormat)
+                    .ToDictionary(g => g.Key, g => g.Count());
+                
+                int ext4Count = 0, erofsCount = 0, f2fsCount = 0, sparseCount = 0, rawCount = 0;
+                fsCounts.TryGetValue(PartitionFileSystem.EXT4, out ext4Count);
+                fsCounts.TryGetValue(PartitionFileSystem.EROFS, out erofsCount);
+                fsCounts.TryGetValue(PartitionFileSystem.F2FS, out f2fsCount);
+                formatCounts.TryGetValue(PartitionImageFormat.Sparse, out sparseCount);
+                formatCounts.TryGetValue(PartitionImageFormat.Raw, out rawCount);
+                
+                LogStatus($"读取分区表成功，共 {partitions.Count} 个分区", true);
+                
+                // 显示文件系统统计 (如果有检测到)
+                if (ext4Count > 0 || erofsCount > 0 || f2fsCount > 0)
+                {
+                    var fsInfo = new List<string>();
+                    if (ext4Count > 0) fsInfo.Add($"EXT4:{ext4Count}");
+                    if (erofsCount > 0) fsInfo.Add($"EROFS:{erofsCount}");
+                    if (f2fsCount > 0) fsInfo.Add($"F2FS:{f2fsCount}");
+                    LogKeyValue("文件系统", string.Join(", ", fsInfo), true);
+                }
+                
+                // 显示格式统计
+                if (sparseCount > 0 || rawCount > 0)
+                {
+                    LogKeyValue("镜像格式", $"Raw:{rawCount}, Sparse:{sparseCount}", true);
+                }
             }
             else
             {
-                AppendLog("未能读取分区表 (Firehose 限制读取)", Color.Orange);
-                AppendLog("提示: 您可以使用 XML 刷写模式进行刷机", Color.Gray);
+                LogStatus("读取分区表", false, "Firehose 限制读取");
+                LogWarning("提示: 您可以使用 XML 刷写模式进行刷机");
             }
+        }
+
+        /// <summary>
+        /// 根据分区属性设置 ListView 项的颜色
+        /// </summary>
+        private void SetPartitionItemColor(ListViewItem item, PartitionInfo part)
+        {
+            // 获取分区风险等级
+            var riskLevel = GetPartitionRiskLevel(part.Name);
+            
+            // 设置整行背景色和文字颜色（基于风险等级）
+            if (riskLevel != PartitionRiskLevel.Normal)
+            {
+                item.BackColor = PartitionRiskBackColors[riskLevel];
+                item.ForeColor = PartitionRiskForeColors[riskLevel];
+                
+                // 为所有子项设置相同颜色
+                foreach (ListViewItem.ListViewSubItem subItem in item.SubItems)
+                {
+                    subItem.BackColor = PartitionRiskBackColors[riskLevel];
+                    subItem.ForeColor = PartitionRiskForeColors[riskLevel];
+                }
+            }
+            
+            // 文件系统类型列 (索引 5) 使用特殊颜色
+            if (item.SubItems.Count > 5)
+            {
+                switch (part.FileSystem)
+                {
+                    case PartitionFileSystem.EROFS:
+                        item.SubItems[5].ForeColor = Color.DarkCyan;
+                        break;
+                    case PartitionFileSystem.EXT4:
+                        item.SubItems[5].ForeColor = Color.DarkGreen;
+                        break;
+                    case PartitionFileSystem.F2FS:
+                        item.SubItems[5].ForeColor = Color.DarkBlue;
+                        break;
+                    case PartitionFileSystem.SquashFS:
+                        item.SubItems[5].ForeColor = Color.DarkMagenta;
+                        break;
+                }
+            }
+            
+            // 镜像格式列 (索引 6) - Sparse 格式用橙色
+            if (item.SubItems.Count > 6 && part.ImageFormat == PartitionImageFormat.Sparse)
+            {
+                item.SubItems[6].ForeColor = Color.DarkOrange;
+            }
+        }
+
+        /// <summary>
+        /// 检测分区镜像文件的格式和文件系统类型
+        /// </summary>
+        private void DetectPartitionImageFormat(PartitionInfo partition, string imagePath)
+        {
+            if (!File.Exists(imagePath)) return;
+
+            try
+            {
+                using (var fs = new FileStream(imagePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                using (var br = new BinaryReader(fs))
+                {
+                    // 文件太小，跳过
+                    if (fs.Length < 28)
+                    {
+                        partition.ImageFormat = PartitionImageFormat.Raw;
+                        partition.FileSystem = PartitionFileSystem.Unknown;
+                        return;
+                    }
+                    
+                    // super.img 需要读取更多数据 (LP 元数据后才是实际分区数据)
+                    bool isSuperPartition = IsLpContainerPartition(partition.Name);
+                    int readSize = isSuperPartition 
+                        ? (int)Math.Min(2 * 1024 * 1024, fs.Length)  // super: 读取 2MB
+                        : (int)Math.Min(16384, fs.Length);           // 其他: 读取 16KB
+                    
+                    byte[] header = br.ReadBytes(readSize);
+                    
+                    // 检测格式和文件系统
+                    var (format, fileSystem) = DetectImageFormatAndFileSystem(header, partition.Name);
+                    partition.ImageFormat = format;
+                    partition.FileSystem = fileSystem;
+                }
+            }
+            catch (Exception ex)
+            {
+                // 只在调试模式下显示警告，避免日志刷屏
+                Debug.WriteLine($"检测 {partition.Name} 格式失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 从数据头检测镜像格式和文件系统类型
+        /// </summary>
+        private (PartitionImageFormat, PartitionFileSystem) DetectImageFormatAndFileSystem(byte[] data, string partitionName = "")
+        {
+            if (data == null || data.Length < 28)
+                return (PartitionImageFormat.Unknown, PartitionFileSystem.Unknown);
+
+            // 常量定义
+            const uint SPARSE_MAGIC = 0xED26FF3A;
+            const uint LP_METADATA_GEOMETRY_MAGIC = 0x616c4467;  // "gDla" - super.img LP 格式
+            const ushort SPARSE_CHUNK_RAW = 0xCAC1;
+            const ushort SPARSE_CHUNK_FILL = 0xCAC2;
+            const ushort SPARSE_CHUNK_DONT_CARE = 0xCAC3;
+
+            PartitionImageFormat format = PartitionImageFormat.Raw;
+
+            // 检查 Sparse 魔数 @ offset 0
+            uint magic0 = BitConverter.ToUInt32(data, 0);
+            if (magic0 == SPARSE_MAGIC)
+            {
+                format = PartitionImageFormat.Sparse;
+                
+                // super 分区是 LP 容器，需要深度扫描
+                if (IsLpContainerPartition(partitionName))
+                {
+                    // 对 Sparse super.img 进行深度扫描
+                    var innerFs = ScanLpContainerFileSystem(data);
+                    return (format, innerFs);
+                }
+                
+                // 解析 Sparse 头部以找到实际数据
+                if (data.Length >= 28)
+                {
+                    ushort fileHdrSz = BitConverter.ToUInt16(data, 8);  // 文件头大小 (通常 28)
+                    ushort chunkHdrSz = BitConverter.ToUInt16(data, 10); // chunk 头大小 (通常 12)
+                    
+                    // 跳过 Sparse 头部，查找第一个 RAW chunk
+                    int offset = fileHdrSz;
+                    int maxOffset = Math.Min(data.Length - 12, 8192); // 最多搜索前 8KB
+                    int safetyCounter = 0; // 防止无限循环
+                    
+                    while (offset < maxOffset && offset >= fileHdrSz && safetyCounter < 100)
+                    {
+                        safetyCounter++;
+                        if (offset + 12 > data.Length) break;
+                        
+                        ushort chunkType = BitConverter.ToUInt16(data, offset);
+                        uint chunkTotalSz = BitConverter.ToUInt32(data, offset + 8);
+                        
+                        // 安全检查：chunkTotalSz 必须大于 0 且合理
+                        if (chunkTotalSz == 0 || chunkTotalSz > int.MaxValue)
+                            break;
+                        
+                        if (chunkType == SPARSE_CHUNK_RAW)
+                        {
+                            // 找到 RAW chunk，检测其中的文件系统
+                            int rawDataOffset = offset + chunkHdrSz;
+                            if (rawDataOffset + 1082 <= data.Length)
+                            {
+                                // 从 RAW chunk 数据中检测文件系统
+                                var fs = DetectFileSystemFromRawData(data, rawDataOffset);
+                                return (format, fs);
+                            }
+                            break;
+                        }
+                        else if (chunkType == SPARSE_CHUNK_FILL || chunkType == SPARSE_CHUNK_DONT_CARE)
+                        {
+                            // 跳过 FILL 和 DONT_CARE chunk (安全转换)
+                            int chunkSize = (int)Math.Min(chunkTotalSz, int.MaxValue);
+                            if (chunkSize <= 0) break; // 防止负数或零
+                            offset += chunkSize;
+                        }
+                        else
+                        {
+                            // 未知 chunk 类型，停止搜索
+                            break;
+                        }
+                    }
+                }
+                
+                return (format, PartitionFileSystem.Unknown);
+            }
+            
+            // 检查是否是 LP 容器格式 (Raw super.img)
+            if (IsLpContainerPartition(partitionName))
+            {
+                // 对 super.img 进行深度扫描，检测内部逻辑分区的文件系统
+                var innerFs = ScanLpContainerFileSystem(data);
+                return (PartitionImageFormat.Raw, innerFs);
+            }
+
+            // Raw 镜像直接检测文件系统
+            var fileSystem = DetectFileSystemFromRawData(data, 0);
+            return (format, fileSystem);
+        }
+        
+        /// <summary>
+        /// 判断分区是否是 LP (Logical Partition) 容器
+        /// </summary>
+        private bool IsLpContainerPartition(string partitionName)
+        {
+            if (string.IsNullOrEmpty(partitionName)) return false;
+            
+            // super 分区是 LP 容器
+            return partitionName.Equals("super", StringComparison.OrdinalIgnoreCase) ||
+                   partitionName.StartsWith("super_", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// 对 super.img (LP 容器) 进行深度扫描，检测内部逻辑分区的文件系统
+        /// </summary>
+        private PartitionFileSystem ScanLpContainerFileSystem(byte[] data)
+        {
+            const uint LP_GEOMETRY_MAGIC = 0x616c4467;  // "gDla"
+            const uint EROFS_MAGIC = 0xE0F5E1E2;
+            const uint F2FS_MAGIC = 0xF2F52010;
+            const ushort EXT4_MAGIC = 0xEF53;
+            
+            // 1. 首先尝试解析 LP 元数据找到第一个逻辑分区的偏移
+            // LP Geometry 通常在 4096 或 8192 字节处
+            int[] geometryOffsets = { 4096, 8192, 0 };
+            long firstPartitionOffset = -1;
+            
+            foreach (int geomOffset in geometryOffsets)
+            {
+                if (geomOffset + 4 > data.Length) continue;
+                
+                uint magic = BitConverter.ToUInt32(data, geomOffset);
+                if (magic == LP_GEOMETRY_MAGIC)
+                {
+                    // 找到 LP Geometry，尝试解析
+                    // LP 元数据结构: Geometry (4KB) + Metadata (variable)
+                    // 第一个逻辑分区通常在 1MB 或更后的位置
+                    // 简化处理：从 1MB 开始扫描
+                    firstPartitionOffset = 1024 * 1024; // 1MB
+                    break;
+                }
+            }
+            
+            // 2. 如果没找到 LP Geometry，也从 1MB 开始扫描
+            if (firstPartitionOffset < 0)
+            {
+                firstPartitionOffset = 1024 * 1024;
+            }
+            
+            // 3. 从可能的起始位置开始扫描文件系统魔数
+            // 扫描范围: 1MB - 2MB，每 4KB 对齐检查
+            for (long offset = firstPartitionOffset; offset < data.Length - 1082; offset += 4096)
+            {
+                int intOffset = (int)offset;
+                
+                // 检查 EROFS @ offset + 1024
+                if (intOffset + 1028 <= data.Length)
+                {
+                    uint erofsCheck = BitConverter.ToUInt32(data, intOffset + 1024);
+                    if (erofsCheck == EROFS_MAGIC)
+                        return PartitionFileSystem.EROFS;
+                }
+                
+                // 检查 F2FS @ offset + 1024
+                if (intOffset + 1028 <= data.Length)
+                {
+                    uint f2fsCheck = BitConverter.ToUInt32(data, intOffset + 1024);
+                    if (f2fsCheck == F2FS_MAGIC)
+                        return PartitionFileSystem.F2FS;
+                }
+                
+                // 检查 EXT4 @ offset + 1080
+                if (intOffset + 1082 <= data.Length)
+                {
+                    ushort ext4Check = BitConverter.ToUInt16(data, intOffset + 1080);
+                    if (ext4Check == EXT4_MAGIC)
+                        return PartitionFileSystem.EXT4;
+                }
+            }
+            
+            // 4. 如果以上都没找到，尝试更大步长扫描
+            for (long offset = 0; offset < Math.Min(data.Length - 1082, 512 * 1024); offset += 65536)
+            {
+                int intOffset = (int)offset;
+                
+                // 检查 EROFS
+                if (intOffset + 1028 <= data.Length)
+                {
+                    uint erofsCheck = BitConverter.ToUInt32(data, intOffset + 1024);
+                    if (erofsCheck == EROFS_MAGIC)
+                        return PartitionFileSystem.EROFS;
+                }
+                
+                // 检查 EXT4
+                if (intOffset + 1082 <= data.Length)
+                {
+                    ushort ext4Check = BitConverter.ToUInt16(data, intOffset + 1080);
+                    if (ext4Check == EXT4_MAGIC)
+                        return PartitionFileSystem.EXT4;
+                }
+            }
+            
+            return PartitionFileSystem.Unknown;
+        }
+
+        /// <summary>
+        /// 从 Raw 数据中检测文件系统类型
+        /// </summary>
+        private PartitionFileSystem DetectFileSystemFromRawData(byte[] data, int baseOffset)
+        {
+            const uint EROFS_MAGIC = 0xE0F5E1E2;
+            const uint F2FS_MAGIC = 0xF2F52010;
+            const ushort EXT4_MAGIC = 0xEF53;
+            const uint SQUASHFS_MAGIC = 0x73717368; // "hsqs" little-endian
+
+            // 检查 EROFS 魔数 @ offset 1024
+            if (baseOffset + 1028 <= data.Length)
+            {
+                uint erofsCheck = BitConverter.ToUInt32(data, baseOffset + 1024);
+                if (erofsCheck == EROFS_MAGIC)
+                    return PartitionFileSystem.EROFS;
+            }
+
+            // 检查 F2FS 魔数 @ offset 1024
+            if (baseOffset + 1028 <= data.Length)
+            {
+                uint f2fsCheck = BitConverter.ToUInt32(data, baseOffset + 1024);
+                if (f2fsCheck == F2FS_MAGIC)
+                    return PartitionFileSystem.F2FS;
+            }
+
+            // 检查 EXT4 魔数 @ offset 1080 (1024 + 0x38)
+            if (baseOffset + 1082 <= data.Length)
+            {
+                ushort ext4Check = BitConverter.ToUInt16(data, baseOffset + 1080);
+                if (ext4Check == EXT4_MAGIC)
+                    return PartitionFileSystem.EXT4;
+            }
+
+            // 检查 SquashFS 魔数 @ offset 0
+            if (baseOffset + 4 <= data.Length)
+            {
+                uint squashCheck = BitConverter.ToUInt32(data, baseOffset);
+                if (squashCheck == SQUASHFS_MAGIC)
+                    return PartitionFileSystem.SquashFS;
+            }
+
+            return PartitionFileSystem.Unknown;
         }
 
         private void UpdatePartitionListGridLines()
@@ -3075,9 +4554,10 @@ namespace OPFlashTool
             }
 
             string storedPath = part.FileName ?? string.Empty;
-            if (item.SubItems.Count < 6)
+            // 确保有足够的 SubItems (索引 0-7: Name, Lun, Size, Start, Sectors, FS, Fmt, File)
+            if (item.SubItems.Count < 8)
             {
-                while (item.SubItems.Count < 6)
+                while (item.SubItems.Count < 8)
                 {
                     item.SubItems.Add(string.Empty);
                 }
@@ -3086,15 +4566,18 @@ namespace OPFlashTool
             string resolvedPath = ResolvePartitionFilePath(storedPath);
             bool fileExists = !string.IsNullOrEmpty(resolvedPath) && File.Exists(resolvedPath);
 
+            // File 列现在是索引 7 (之前是 5，但增加了 FS 和 Fmt 列)
+            const int FILE_COLUMN_INDEX = 7;
+
             if (string.IsNullOrEmpty(storedPath))
             {
-                item.SubItems[5].Text = string.Empty;
+                item.SubItems[FILE_COLUMN_INDEX].Text = string.Empty;
                 item.Checked = false;
                 item.ForeColor = Color.Black;
                 return;
             }
 
-            item.SubItems[5].Text = fileExists ? storedPath : $"{storedPath} (缺失)";
+            item.SubItems[FILE_COLUMN_INDEX].Text = fileExists ? storedPath : $"{storedPath} (缺失)";
 
             if (!fileExists)
             {
@@ -3136,9 +4619,10 @@ namespace OPFlashTool
 
         private async void button6_Click_1(object sender, EventArgs e)
         {
-             if (!isGptRead)
+            // 检查是否有分区数据（从设备读取或从 XML 加载）
+            if (!isGptRead && !hasXmlPartitions)
             {
-                ShowWarnMessage("请先成功读取分区表 (GPT) 后再进行操作");
+                ShowWarnMessage("请先读取分区表或加载固件 XML 后再进行操作");
                 return;
             }
 
@@ -3293,9 +4777,10 @@ namespace OPFlashTool
 
         private async void button7_Click(object sender, EventArgs e)
         {
-             if (!isGptRead)
+            // 检查是否有分区数据（从设备读取或从 XML 加载）
+            if (!isGptRead && !hasXmlPartitions)
             {
-                ShowWarnMessage("请先成功读取分区表 (GPT) 后再进行操作");
+                ShowWarnMessage("请先读取分区表或加载固件 XML 后再进行操作");
                 return;
             }
 
@@ -5045,7 +6530,17 @@ namespace OPFlashTool
         }
 
         #endregion
-        
+
         #endregion
+
+        private void checkbox2_CheckedChanged(object sender, BoolEventArgs e)
+        {
+
+        }
+
+        private void listView1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+
+        }
     }
 }

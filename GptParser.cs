@@ -3,24 +3,641 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Linq;
+using System.Xml.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace OPFlashTool
 {
-    // 保持 UI 兼容的视图模型
+    /// <summary>
+    /// 镜像格式
+    /// </summary>
+    public enum PartitionImageFormat
+    {
+        Unknown,
+        Raw,
+        Sparse
+    }
+
+    /// <summary>
+    /// 文件系统类型
+    /// </summary>
+    public enum PartitionFileSystem
+    {
+        Unknown,
+        EXT4,
+        EROFS,
+        F2FS,
+        FAT32,
+        NTFS,
+        SquashFS,
+        None  // 无文件系统 (如 bootloader)
+    }
+
+    /// <summary>
+    /// 分区信息 (增强版)
+    /// </summary>
     public class PartitionInfo
     {
         public int Lun { get; set; }
         public string Name { get; set; } = "";
         public ulong StartLba { get; set; }
-        public string StartLbaStr { get; set; } // [新增] 支持 XML 中的字符串/公式
+        public string StartLbaStr { get; set; } // 支持 XML 中的字符串/公式
         public ulong Sectors { get; set; }
         public int SectorSize { get; set; } = 4096;
         public string FileName { get; set; } = ""; // 关联的镜像文件名
 
+        // 新增属性
+        public PartitionImageFormat ImageFormat { get; set; } = PartitionImageFormat.Unknown;
+        public PartitionFileSystem FileSystem { get; set; } = PartitionFileSystem.Unknown;
+        public string Label { get; set; } = "";  // 分区标签
+        public bool IsReadOnly { get; set; }
+        public bool IsMounted { get; set; }
+        public string MountPoint { get; set; } = "";
+        
+        // 来源信息
+        public PartitionSource Source { get; set; } = PartitionSource.Unknown;
+        public string SourceFile { get; set; } = ""; // XML 文件路径或设备标识
+
         public ulong EndLba => StartLba + Sectors - 1;
-        public double SizeKb => (Sectors * (ulong)SectorSize) / 1024.0;
+        public ulong SizeBytes => Sectors * (ulong)SectorSize;
+        public double SizeKb => SizeBytes / 1024.0;
         public double SizeMb => SizeKb / 1024.0;
         public double SizeGb => SizeMb / 1024.0;
+
+        /// <summary>
+        /// 获取格式化的大小字符串
+        /// </summary>
+        public string SizeFormatted
+        {
+            get
+            {
+                if (SizeGb >= 1) return $"{SizeGb:F2} GB";
+                if (SizeMb >= 1) return $"{SizeMb:F2} MB";
+                if (SizeKb >= 1) return $"{SizeKb:F2} KB";
+                return $"{SizeBytes} B";
+            }
+        }
+
+        /// <summary>
+        /// 获取文件系统的简短名称
+        /// </summary>
+        public string FileSystemShort
+        {
+            get
+            {
+                switch (FileSystem)
+                {
+                    case PartitionFileSystem.EXT4: return "EXT4";
+                    case PartitionFileSystem.EROFS: return "EROFS";
+                    case PartitionFileSystem.F2FS: return "F2FS";
+                    case PartitionFileSystem.FAT32: return "FAT32";
+                    case PartitionFileSystem.NTFS: return "NTFS";
+                    case PartitionFileSystem.SquashFS: return "SquashFS";
+                    case PartitionFileSystem.None: return "-";
+                    case PartitionFileSystem.Unknown: return "-";
+                    default: return "-";
+                }
+            }
+        }
+
+        /// <summary>
+        /// 获取镜像格式的简短名称
+        /// </summary>
+        public string ImageFormatShort
+        {
+            get
+            {
+                switch (ImageFormat)
+                {
+                    case PartitionImageFormat.Raw: return "Raw";
+                    case PartitionImageFormat.Sparse: return "Sparse";
+                    case PartitionImageFormat.Unknown: return "-";
+                    default: return "-";
+                }
+            }
+        }
+
+        public override string ToString()
+        {
+            return $"{Name} @ LUN{Lun} [{SizeFormatted}] {FileSystemShort} ({ImageFormatShort})";
+        }
+    }
+
+    /// <summary>
+    /// 分区表来源
+    /// </summary>
+    public enum PartitionSource
+    {
+        Unknown,
+        Device,     // 从设备读取
+        XmlFile,    // 从 XML 文件解析
+        GptFile,    // 从 GPT 文件解析
+        Manual      // 手动添加
+    }
+
+    /// <summary>
+    /// 分区表管理器 - 支持多种来源
+    /// </summary>
+    public class PartitionTableManager
+    {
+        private List<PartitionInfo> _partitions = new List<PartitionInfo>();
+        private Action<string> _log;
+        private Qualcomm.FirehoseClient _firehose;
+        private Qualcomm.SparseImageHandler _sparseHandler;
+
+        public IReadOnlyList<PartitionInfo> Partitions => _partitions.AsReadOnly();
+        public PartitionSource CurrentSource { get; private set; } = PartitionSource.Unknown;
+        public string SourcePath { get; private set; } = "";
+        public int SectorSize { get; set; } = 4096;
+
+        public PartitionTableManager(Action<string> logger = null)
+        {
+            _log = logger ?? Console.WriteLine;
+            _sparseHandler = new Qualcomm.SparseImageHandler(_log);
+        }
+
+        public PartitionTableManager(Qualcomm.FirehoseClient firehose, Action<string> logger = null)
+        {
+            _firehose = firehose;
+            _log = logger ?? Console.WriteLine;
+            _sparseHandler = new Qualcomm.SparseImageHandler(firehose, _log);
+        }
+
+        #region 从 XML 文件加载
+
+        /// <summary>
+        /// 从 rawprogram XML 文件加载分区表
+        /// </summary>
+        public List<PartitionInfo> LoadFromXml(string xmlPath)
+        {
+            _partitions.Clear();
+            CurrentSource = PartitionSource.XmlFile;
+            SourcePath = xmlPath;
+
+            try
+            {
+                var doc = XDocument.Load(xmlPath);
+                var root = doc.Root;
+
+                if (root == null)
+                {
+                    _log("[XML] 无效的 XML 文件");
+                    return _partitions;
+                }
+
+                // 查找所有 program 元素
+                var programs = root.Descendants("program");
+                
+                foreach (var prog in programs)
+                {
+                    var partition = ParseProgramElement(prog);
+                    if (partition != null)
+                    {
+                        partition.Source = PartitionSource.XmlFile;
+                        partition.SourceFile = xmlPath;
+                        _partitions.Add(partition);
+                    }
+                }
+
+                _log($"[XML] 从 {Path.GetFileName(xmlPath)} 加载了 {_partitions.Count} 个分区");
+            }
+            catch (Exception ex)
+            {
+                _log($"[XML] 解析错误: {ex.Message}");
+            }
+
+            return _partitions;
+        }
+
+        /// <summary>
+        /// 从多个 rawprogram XML 文件加载 (支持多 LUN)
+        /// </summary>
+        public List<PartitionInfo> LoadFromXmlFiles(IEnumerable<string> xmlPaths)
+        {
+            _partitions.Clear();
+            CurrentSource = PartitionSource.XmlFile;
+
+            foreach (var xmlPath in xmlPaths)
+            {
+                if (!File.Exists(xmlPath)) continue;
+
+                try
+                {
+                    var doc = XDocument.Load(xmlPath);
+                    var programs = doc.Root?.Descendants("program") ?? Enumerable.Empty<XElement>();
+
+                    // 尝试从文件名提取 LUN 号 (如 rawprogram0.xml, rawprogram_unsparse1.xml)
+                    int defaultLun = ExtractLunFromFileName(xmlPath);
+
+                    foreach (var prog in programs)
+                    {
+                        var partition = ParseProgramElement(prog, defaultLun);
+                        if (partition != null)
+                        {
+                            partition.Source = PartitionSource.XmlFile;
+                            partition.SourceFile = xmlPath;
+                            _partitions.Add(partition);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _log($"[XML] 解析 {Path.GetFileName(xmlPath)} 失败: {ex.Message}");
+                }
+            }
+
+            _log($"[XML] 共加载 {_partitions.Count} 个分区");
+            SourcePath = string.Join(";", xmlPaths);
+            return _partitions;
+        }
+
+        private PartitionInfo ParseProgramElement(XElement prog, int defaultLun = 0)
+        {
+            string label = prog.Attribute("label")?.Value ?? "";
+            string filename = prog.Attribute("filename")?.Value ?? "";
+            
+            // 跳过没有标签或空白条目
+            if (string.IsNullOrWhiteSpace(label) && string.IsNullOrWhiteSpace(filename))
+                return null;
+
+            var partition = new PartitionInfo
+            {
+                Name = label,
+                FileName = filename,
+                Label = label
+            };
+
+            // 解析 LUN
+            string lunStr = prog.Attribute("physical_partition_number")?.Value ?? defaultLun.ToString();
+            if (int.TryParse(lunStr, out int lun))
+                partition.Lun = lun;
+
+            // 解析起始扇区 (可能是公式)
+            string startSector = prog.Attribute("start_sector")?.Value ?? "0";
+            partition.StartLbaStr = startSector;
+            if (ulong.TryParse(startSector, out ulong startLba))
+                partition.StartLba = startLba;
+
+            // 解析扇区数
+            string numSectors = prog.Attribute("num_partition_sectors")?.Value ?? "0";
+            if (ulong.TryParse(numSectors, out ulong sectors))
+                partition.Sectors = sectors;
+
+            // 解析扇区大小
+            string sectorSizeStr = prog.Attribute("SECTOR_SIZE_IN_BYTES")?.Value ?? SectorSize.ToString();
+            if (int.TryParse(sectorSizeStr, out int sectorSize))
+                partition.SectorSize = sectorSize;
+
+            // 检查是否 sparse
+            string sparse = prog.Attribute("sparse")?.Value ?? "false";
+            partition.ImageFormat = sparse.ToLower() == "true" ? 
+                PartitionImageFormat.Sparse : PartitionImageFormat.Raw;
+
+            // 只读标记
+            string readOnly = prog.Attribute("readonly")?.Value ?? "false";
+            partition.IsReadOnly = readOnly.ToLower() == "true";
+
+            return partition;
+        }
+
+        private int ExtractLunFromFileName(string filePath)
+        {
+            string fileName = Path.GetFileNameWithoutExtension(filePath);
+            // 尝试匹配 rawprogram0, rawprogram_unsparse1 等模式
+            for (int i = fileName.Length - 1; i >= 0; i--)
+            {
+                if (char.IsDigit(fileName[i]))
+                {
+                    // 找到最后一个数字
+                    int end = i;
+                    while (i > 0 && char.IsDigit(fileName[i - 1]))
+                        i--;
+                    if (int.TryParse(fileName.Substring(i, end - i + 1), out int lun))
+                        return lun;
+                }
+            }
+            return 0;
+        }
+
+        #endregion
+
+        #region 从 GPT 文件加载
+
+        /// <summary>
+        /// 从 GPT 二进制文件加载分区表
+        /// </summary>
+        public List<PartitionInfo> LoadFromGptFile(string gptPath, int lunId = 0)
+        {
+            _partitions.Clear();
+            CurrentSource = PartitionSource.GptFile;
+            SourcePath = gptPath;
+
+            var parsed = GptParser.ParseGptFile(gptPath, lunId);
+            foreach (var p in parsed)
+            {
+                p.Source = PartitionSource.GptFile;
+                p.SourceFile = gptPath;
+                _partitions.Add(p);
+            }
+
+            _log($"[GPT] 从 {Path.GetFileName(gptPath)} 加载了 {_partitions.Count} 个分区");
+            return _partitions;
+        }
+
+        /// <summary>
+        /// 从多个 GPT 文件加载 (多 LUN)
+        /// </summary>
+        public List<PartitionInfo> LoadFromGptFiles(Dictionary<int, string> lunGptPaths)
+        {
+            _partitions.Clear();
+            CurrentSource = PartitionSource.GptFile;
+
+            foreach (var kvp in lunGptPaths)
+            {
+                int lun = kvp.Key;
+                string gptPath = kvp.Value;
+
+                if (!File.Exists(gptPath)) continue;
+
+                var parsed = GptParser.ParseGptFile(gptPath, lun);
+                foreach (var p in parsed)
+                {
+                    p.Source = PartitionSource.GptFile;
+                    p.SourceFile = gptPath;
+                    _partitions.Add(p);
+                }
+            }
+
+            _log($"[GPT] 共加载 {_partitions.Count} 个分区");
+            return _partitions;
+        }
+
+        #endregion
+
+        #region 从设备读取
+
+        /// <summary>
+        /// 从设备读取分区表 (通过 Firehose)
+        /// </summary>
+        public async Task<List<PartitionInfo>> LoadFromDeviceAsync(int maxLuns = 6, CancellationToken ct = default)
+        {
+            if (_firehose == null)
+            {
+                _log("[Device] 未连接设备");
+                return _partitions;
+            }
+
+            _partitions.Clear();
+            CurrentSource = PartitionSource.Device;
+            SourcePath = "Device";
+
+            string tempDir = Path.Combine(Path.GetTempPath(), $"gpt_{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDir);
+
+            try
+            {
+                for (int lun = 0; lun < maxLuns; lun++)
+                {
+                    if (ct.IsCancellationRequested) break;
+
+                    string gptPath = Path.Combine(tempDir, $"gpt_lun{lun}.bin");
+
+                    // 读取 GPT (通常是前 34 个扇区)
+                    bool success = await _firehose.ReadPartitionChunkedAsync(
+                        gptPath, "0", 34, lun.ToString(),
+                        null, ct, $"GPT_LUN{lun}", null, false, true);
+
+                    if (!success || !File.Exists(gptPath))
+                    {
+                        _log($"[Device] LUN{lun} 无 GPT 或读取失败");
+                        continue;
+                    }
+
+                    var parsed = GptParser.ParseGptFile(gptPath, lun);
+                    foreach (var p in parsed)
+                    {
+                        p.Source = PartitionSource.Device;
+                        p.SourceFile = $"LUN{lun}";
+                        _partitions.Add(p);
+                    }
+
+                    _log($"[Device] LUN{lun}: {parsed.Count} 个分区");
+                }
+            }
+            finally
+            {
+                try { Directory.Delete(tempDir, true); } catch { }
+            }
+
+            _log($"[Device] 共读取 {_partitions.Count} 个分区");
+            return _partitions;
+        }
+
+        #endregion
+
+        #region 文件系统检测
+
+        /// <summary>
+        /// 检测所有分区的文件系统类型 (从镜像文件)
+        /// </summary>
+        public void DetectFileSystemsFromImages(string imagesDirectory)
+        {
+            foreach (var partition in _partitions)
+            {
+                if (string.IsNullOrEmpty(partition.FileName))
+                    continue;
+
+                string imagePath = Path.Combine(imagesDirectory, partition.FileName);
+                if (!File.Exists(imagePath))
+                    continue;
+
+                DetectPartitionFormat(partition, imagePath);
+            }
+        }
+
+        /// <summary>
+        /// 检测单个分区的格式和文件系统
+        /// </summary>
+        public void DetectPartitionFormat(PartitionInfo partition, string imagePath)
+        {
+            if (!File.Exists(imagePath))
+                return;
+
+            try
+            {
+                var imageInfo = _sparseHandler.GetImageInfo(imagePath);
+                partition.ImageFormat = imageInfo.Format == Qualcomm.ImageFormat.Sparse ? 
+                    PartitionImageFormat.Sparse : PartitionImageFormat.Raw;
+                partition.FileSystem = ConvertFileSystem(imageInfo.FileSystemType);
+            }
+            catch (Exception ex)
+            {
+                _log($"[检测] {partition.Name} 格式检测失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 从设备检测分区的文件系统类型
+        /// </summary>
+        public async Task DetectFileSystemFromDeviceAsync(PartitionInfo partition, CancellationToken ct = default)
+        {
+            if (_firehose == null || partition.Sectors == 0)
+                return;
+
+            string tempFile = Path.Combine(Path.GetTempPath(), $"fsdetect_{Guid.NewGuid():N}.bin");
+
+            try
+            {
+                // 只读取前 8KB 用于检测
+                int sectorsToRead = Math.Min(16, (int)partition.Sectors);
+                
+                bool success = await _firehose.ReadPartitionChunkedAsync(
+                    tempFile,
+                    partition.StartLba.ToString(),
+                    sectorsToRead,
+                    partition.Lun.ToString(),
+                    null, ct,
+                    partition.Name,
+                    null, false, true);
+
+                if (success && File.Exists(tempFile))
+                {
+                    byte[] data = File.ReadAllBytes(tempFile);
+                    var fsType = _sparseHandler.DetectFileSystemType(data);
+                    partition.FileSystem = ConvertFileSystem(fsType);
+                    partition.ImageFormat = PartitionImageFormat.Raw; // 从设备读取的都是 Raw
+                }
+            }
+            finally
+            {
+                try { if (File.Exists(tempFile)) File.Delete(tempFile); } catch { }
+            }
+        }
+
+        /// <summary>
+        /// 批量从设备检测文件系统
+        /// </summary>
+        public async Task DetectAllFileSystemsFromDeviceAsync(
+            IEnumerable<string> partitionNames = null, 
+            CancellationToken ct = default)
+        {
+            var targets = partitionNames == null ? 
+                _partitions : 
+                _partitions.Where(p => partitionNames.Contains(p.Name, StringComparer.OrdinalIgnoreCase));
+
+            foreach (var partition in targets)
+            {
+                if (ct.IsCancellationRequested) break;
+                await DetectFileSystemFromDeviceAsync(partition, ct);
+            }
+        }
+
+        private PartitionFileSystem ConvertFileSystem(Qualcomm.DeviceInfoReader.FileSystemType fsType)
+        {
+            switch (fsType)
+            {
+                case Qualcomm.DeviceInfoReader.FileSystemType.EXT4:
+                    return PartitionFileSystem.EXT4;
+                case Qualcomm.DeviceInfoReader.FileSystemType.EROFS:
+                    return PartitionFileSystem.EROFS;
+                case Qualcomm.DeviceInfoReader.FileSystemType.F2FS:
+                    return PartitionFileSystem.F2FS;
+                default:
+                    return PartitionFileSystem.Unknown;
+            }
+        }
+
+        #endregion
+
+        #region 查询方法
+
+        /// <summary>
+        /// 按名称查找分区
+        /// </summary>
+        public PartitionInfo FindByName(string name)
+        {
+            return _partitions.FirstOrDefault(p => 
+                p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        }
+
+        /// <summary>
+        /// 按 LUN 获取分区
+        /// </summary>
+        public IEnumerable<PartitionInfo> GetByLun(int lun)
+        {
+            return _partitions.Where(p => p.Lun == lun);
+        }
+
+        /// <summary>
+        /// 获取所有 LUN 编号
+        /// </summary>
+        public IEnumerable<int> GetAllLuns()
+        {
+            return _partitions.Select(p => p.Lun).Distinct().OrderBy(l => l);
+        }
+
+        /// <summary>
+        /// 获取指定文件系统类型的分区
+        /// </summary>
+        public IEnumerable<PartitionInfo> GetByFileSystem(PartitionFileSystem fs)
+        {
+            return _partitions.Where(p => p.FileSystem == fs);
+        }
+
+        /// <summary>
+        /// 获取系统分区列表 (system, vendor, product, super 等)
+        /// </summary>
+        public IEnumerable<PartitionInfo> GetSystemPartitions()
+        {
+            var systemNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "system", "system_a", "system_b",
+                "vendor", "vendor_a", "vendor_b",
+                "product", "product_a", "product_b",
+                "system_ext", "system_ext_a", "system_ext_b",
+                "odm", "odm_a", "odm_b",
+                "super"
+            };
+            return _partitions.Where(p => systemNames.Contains(p.Name));
+        }
+
+        #endregion
+
+        #region 输出
+
+        /// <summary>
+        /// 获取分区表的格式化字符串
+        /// </summary>
+        public string ToFormattedString(bool includeHeader = true)
+        {
+            var sb = new StringBuilder();
+            
+            if (includeHeader)
+            {
+                sb.AppendLine($"Source: {CurrentSource} ({SourcePath})");
+                sb.AppendLine($"Total Partitions: {_partitions.Count}");
+                sb.AppendLine();
+            }
+
+            // 按 LUN 分组显示
+            foreach (var lun in GetAllLuns())
+            {
+                sb.AppendLine($"═══ LUN {lun} ═══");
+                sb.AppendLine($"{"Name",-20} {"Start",-12} {"Size",-12} {"FS",-8} {"Format",-8}");
+                sb.AppendLine(new string('─', 64));
+
+                foreach (var p in GetByLun(lun).OrderBy(p => p.StartLba))
+                {
+                    sb.AppendLine($"{p.Name,-20} {p.StartLba,-12} {p.SizeFormatted,-12} {p.FileSystemShort,-8} {p.ImageFormatShort,-8}");
+                }
+                sb.AppendLine();
+            }
+
+            return sb.ToString();
+        }
+
+        #endregion
     }
 
     // --- 以下参照 gpttool 定义的底层结构 ---
