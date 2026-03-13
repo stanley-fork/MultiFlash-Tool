@@ -1,0 +1,103 @@
+# ============================================
+# 构建与输出 (Build results)
+# ============================================
+bin/
+obj/
+packages/
+
+# 安装包输出
+installer/
+portable/
+
+# ============================================
+# IDE 与用户文件
+# ============================================
+.vs/
+*.rsuser
+*.user
+*.suo
+*.cache
+*.nrproj
+.nrproj
+
+# Cursor / 本地开发
+.cursor/
+agent-transcripts/
+terminals/
+
+# ============================================
+# 临时与系统文件
+# ============================================
+*.tmp
+*.log
+*.bak
+Thumbs.db
+.DS_Store
+nuget.exe
+
+# ============================================
+# 与主项目无关 — 不提交 GitHub
+# ============================================
+# 其他独立项目 / 工具
+php-server/
+RealmeAuth/
+mtkclient/
+FastbootTool/
+
+# 外部/参考源码（非本仓库一部分）
+edl-master/
+package_qualcomm_edl-master/
+gpttool/
+tools/
+oplus_ota_tool/
+FastbootEnhance-master/
+
+# 网站/数据库/资源包/大文件
+www-new/
+www.xiriacg.top_S8SDP/
+loaders_hjRRx/
+SprdResources/
+Payloads/
+
+# 内部文档（含流程/接口等，不公开）
+WORKLOG_REALME_FIREHOSE.md
+*REALME*.md
+
+# Realme 认证实现（不提交 GitHub，提交时请勿包含以下文件）
+Qualcomm/Services/RealmeSignService.cs
+Qualcomm/Services/RealmeCloudLoaderService.cs
+
+# 脚本与运行时数据（非源码）
+setup_payloads.bat
+node_modules/
+package-lock.json
+
+# ============================================
+# 非源码资源（固件/逆向/分析）
+# ============================================
+*.pak
+*.elf
+*.mbn
+*.melf
+
+# IDA Pro
+*.i64
+*.id0
+*.id1
+*.id2
+*.nam
+*.til
+*.idb
+
+# 压缩包（通常为数据/备份）
+*.7z
+*.zip
+*.rar
+
+# 临时分析
+*.py
+*_Report.txt
+*_report.txt
+*_analysis.txt
+*_props.txt
+super_*.txt

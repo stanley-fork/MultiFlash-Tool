@@ -1,0 +1,327 @@
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using OPFlashTool.Services;
+
+namespace SakuraEDL
+{
+    /// <summary>
+    /// 预加载管理器 - 优化版，支持懒加载模式减少内存占用
+    /// EDL Loader 已改为云端自动匹配，不再预加载本地 PAK
+    /// </summary>
+    public static class PreloadManager
+    {
+        // 预加载状态
+        public static bool IsPreloadComplete { get; private set; } = false;
+        public static string CurrentStatus { get; private set; } = "准备中...";
+        public static int Progress { get; private set; } = 0;
+
+        // 懒加载数据 - 按需加载
+        #pragma warning disable CS0414 // 未使用的字段 - 保留用于未来兼容
+        private static List<string> _edlLoaderItems = null;
+        private static List<string> _vipLoaderItems = null;
+        private static bool _edlLoaderItemsLoaded = false;
+        private static bool _vipLoaderItemsLoaded = false;
+        #pragma warning restore CS0414
+        private static readonly object _loaderLock = new object();
+
+        /// <summary>
+        /// EDL Loader 列表 (已废弃，使用云端匹配)
+        /// </summary>
+        [Obsolete("使用云端自动匹配")]
+        public static List<string> EdlLoaderItems
+        {
+            get
+            {
+                // 返回空列表，EDL Loader 现在使用云端匹配
+                return new List<string>();
+            }
+        }
+        
+        /// <summary>
+        /// VIP Loader 列表 (仍从本地 PAK 加载)
+        /// </summary>
+        public static List<string> VipLoaderItems
+        {
+            get
+            {
+                if (!_vipLoaderItemsLoaded)
+                {
+                    lock (_loaderLock)
+                    {
+                        if (!_vipLoaderItemsLoaded)
+                        {
+                            _vipLoaderItems = BuildVipLoaderItems();
+                            _vipLoaderItemsLoaded = true;
+                        }
+                    }
+                }
+                return _vipLoaderItems;
+            }
+        }
+
+        private static string _systemInfo = null;
+        private static volatile bool _systemInfoLoading = false;
+        
+        public static string SystemInfo
+        {
+            get
+            {
+                if (_systemInfo == null)
+                {
+                    // 如果正在加载，返回默认值避免阻塞
+                    if (_systemInfoLoading)
+                        return "加载中...";
+                    
+                    _systemInfoLoading = true;
+                    try 
+                    { 
+                        // 使用带超时的异步操作，避免长时间阻塞
+                        var task = Task.Run(async () => 
+                            await WindowsInfo.GetSystemInfoAsync().ConfigureAwait(false)
+                        );
+                        
+                        // 最多等待 2 秒，超时则返回默认值
+                        if (task.Wait(2000))
+                        {
+                            _systemInfo = task.Result;
+                        }
+                        else
+                        {
+                            _systemInfo = "未知";
+                            System.Diagnostics.Debug.WriteLine("[PreloadManager] 获取系统信息超时");
+                        }
+                    }
+                    catch (Exception ex)
+                    { 
+                        System.Diagnostics.Debug.WriteLine($"[PreloadManager] 获取系统信息失败: {ex.Message}");
+                        _systemInfo = "未知"; 
+                    }
+                    finally
+                    {
+                        _systemInfoLoading = false;
+                    }
+                }
+                return _systemInfo;
+            }
+        }
+
+        #pragma warning disable CS0414
+        private static bool? _edlPakAvailable = null;
+        #pragma warning restore CS0414
+        
+        /// <summary>
+        /// EDL PAK 是否可用 (已废弃，使用云端匹配)
+        /// </summary>
+        [Obsolete("使用云端自动匹配")]
+        public static bool EdlPakAvailable
+        {
+            get
+            {
+                // 始终返回 false，强制使用云端匹配
+                return false;
+            }
+        }
+        
+        private static bool? _vipPakAvailable = null;
+        public static bool VipPakAvailable
+        {
+            get
+            {
+                if (!_vipPakAvailable.HasValue)
+                    _vipPakAvailable = false; // ChimeraSignDatabase 已移除
+                return _vipPakAvailable.Value;
+            }
+        }
+
+        // 预加载任务
+        private static Task _preloadTask = null;
+
+        // 是否启用懒加载模式 (使用 PerformanceConfig)
+        private static bool EnableLazyLoading => Common.PerformanceConfig.EnableLazyLoading;
+
+        /// <summary>
+        /// 启动预加载（在 SplashForm 中调用）
+        /// 优化版：仅加载必要资源，其他按需加载
+        /// EDL Loader 改为云端自动匹配，不再预加载
+        /// </summary>
+        public static void StartPreload()
+        {
+            if (_preloadTask != null) return;
+
+            _preloadTask = Task.Run(async () =>
+            {
+                try
+                {
+                    // 阶段0: 提取嵌入的工具文件（必须）
+                    CurrentStatus = "提取工具文件...";
+                    Progress = 10;
+                    EmbeddedResourceExtractor.ExtractAll();
+                    Progress = 30;
+
+                    // 阶段1: 检查 VIP PAK（快速）- ChimeraSignDatabase 已移除
+                    CurrentStatus = "检查资源包...";
+                    Progress = 40;
+                    _vipPakAvailable = false;
+                    Progress = 50;
+
+                    // 懒加载模式：跳过预加载系统信息
+                    if (!EnableLazyLoading)
+                    {
+                        // 阶段2: 预加载 VIP Loader 列表 (如果可用)
+                        if (_vipPakAvailable.Value)
+                        {
+                            CurrentStatus = "加载 VIP 引导数据库...";
+                            Progress = 60;
+                            _vipLoaderItems = BuildVipLoaderItems();
+                            _vipLoaderItemsLoaded = true;
+                        }
+                        Progress = 70;
+
+                        // 阶段3: 预加载系统信息
+                        CurrentStatus = "获取系统信息...";
+                        Progress = 80;
+                        try { _systemInfo = await WindowsInfo.GetSystemInfoAsync(); }
+                        catch { _systemInfo = "未知"; }
+                    }
+                    
+                    Progress = 90;
+
+                    // 阶段4: 预热常用类型（轻量级）
+                    CurrentStatus = "初始化组件...";
+                    PrewarmTypesLight();
+
+                    // 完成
+                    CurrentStatus = "加载完成";
+                    Progress = 100;
+                    IsPreloadComplete = true;
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"预加载失败: {ex.Message}");
+                    CurrentStatus = "加载完成";
+                    Progress = 100;
+                    IsPreloadComplete = true;
+                }
+            });
+        }
+
+        /// <summary>
+        /// 释放缓存以减少内存占用
+        /// </summary>
+        public static void ClearCache()
+        {
+            lock (_loaderLock)
+            {
+                _edlLoaderItems?.Clear();
+                _edlLoaderItems = null;
+                _edlLoaderItemsLoaded = false;
+                
+                _vipLoaderItems?.Clear();
+                _vipLoaderItems = null;
+                _vipLoaderItemsLoaded = false;
+            }
+            GC.Collect(0, GCCollectionMode.Optimized);
+        }
+
+        /// <summary>
+        /// 等待预加载完成
+        /// </summary>
+        public static async Task WaitForPreloadAsync()
+        {
+            if (_preloadTask != null)
+            {
+                await _preloadTask;
+            }
+        }
+
+        /// <summary>
+        /// 构建 EDL Loader 列表项 (已废弃，使用云端匹配)
+        /// </summary>
+        [Obsolete("使用云端自动匹配")]
+        private static List<string> BuildEdlLoaderItems()
+        {
+            // 不再构建本地 PAK 列表，EDL Loader 使用云端匹配
+            return new List<string>();
+        }
+        
+        /// <summary>
+        /// 构建 VIP Loader 列表项 (OPLUS 签名认证设备)
+        /// </summary>
+        private static List<string> BuildVipLoaderItems()
+        {
+            // ChimeraSignDatabase 已移除，不再构建 VIP 列表
+            return new List<string>();
+        }
+
+        /// <summary>
+        /// 获取品牌中文显示名
+        /// </summary>
+        private static string GetBrandDisplayName(string brand)
+        {
+            switch (brand.ToLower())
+            {
+                case "huawei": return "华为/荣耀";
+                case "zte": return "中兴/努比亚/红魔";
+                case "xiaomi": return "小米/Redmi";
+                case "blackshark": return "黑鲨";
+                case "vivo": return "vivo/iQOO";
+                case "meizu": return "魅族";
+                case "lenovo": return "联想/摩托罗拉";
+                case "samsung": return "三星";
+                case "nothing": return "Nothing";
+                case "rog": return "华硕ROG";
+                case "lg": return "LG";
+                case "smartisan": return "锤子";
+                case "xtc": return "小天才";
+                case "360": return "360";
+                case "bbk": return "BBK";
+                case "royole": return "柔宇";
+                case "oplus": return "OPPO/OnePlus/Realme";
+                default: return brand;
+            }
+        }
+
+        /// <summary>
+        /// 预热常用类型，避免首次使用时 JIT 编译延迟
+        /// </summary>
+        private static void PrewarmTypes()
+        {
+            try
+            {
+                // 预热 UI 相关类型
+                var _ = typeof(AntdUI.Select);
+                var __ = typeof(Sunny.UI.UIButton);
+                var ___ = typeof(System.Windows.Forms.ListView);
+
+                // 预热 IO 相关
+                var ____ = typeof(System.IO.FileStream);
+                var _____ = typeof(System.IO.MemoryStream);
+
+                // 预热网络相关
+                var ______ = typeof(System.Net.Http.HttpClient);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[PreloadManager] 类型预热失败 (非关键): {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 轻量级预热 - 仅预热核心类型，减少内存占用
+        /// </summary>
+        private static void PrewarmTypesLight()
+        {
+            try
+            {
+                // 仅预热最核心的 IO 类型
+                var _ = typeof(System.IO.FileStream);
+                var __ = typeof(System.Windows.Forms.ListView);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[PreloadManager] 轻量预热失败 (非关键): {ex.Message}");
+            }
+        }
+    }
+}
