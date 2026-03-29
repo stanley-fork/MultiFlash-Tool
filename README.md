@@ -19,10 +19,15 @@
   <a href="#realme-authentication"><img src="https://img.shields.io/badge/Auth-Realme%20Flow-7C3AED?style=for-the-badge" alt="Realme Authentication"></a>
   <a href="docs/BUILD_STATIC.md"><img src="https://img.shields.io/badge/Docs-Static%20Qt-EF4444?style=for-the-badge" alt="Static Qt Docs"></a>
   <a href="DISCLAIMER.md"><img src="https://img.shields.io/badge/Notice-Disclaimer-B91C1C?style=for-the-badge" alt="Disclaimer"></a>
+  <a href="https://t.me/xiriery"><img src="https://img.shields.io/badge/Contact-Telegram-0EA5E9?style=for-the-badge&logo=telegram" alt="Telegram Contact"></a>
   <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Project-Changelog-374151?style=for-the-badge" alt="Changelog"></a>
 </p>
 
 > This repository tracks the native Qt/CMake implementation of SakuraEDL. Public source code and documentation are included. Build outputs, firmware packages, and private signing material are intentionally excluded.
+>
+> Disclaimer: SakuraEDL is a low-level service and research tool. Use it only on hardware and data you own or are explicitly authorized to service. All operations are performed at your own risk.
+>
+> Contact: [t.me/xiriery](https://t.me/xiriery)
 
 ## Product Overview
 
@@ -151,6 +156,10 @@ SakuraEDL is a low-level service tool. Incorrect flashing, partition writes, or 
 Formal disclaimer:
 
 - [`DISCLAIMER.md`](DISCLAIMER.md)
+
+## Contact
+
+- Telegram: [https://t.me/xiriery](https://t.me/xiriery)
 
 ## Contributing
 

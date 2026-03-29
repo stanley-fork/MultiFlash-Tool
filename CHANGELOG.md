@@ -17,6 +17,7 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 - Refined repository presentation for open-source distribution
 - Clarified repository policy around excluding build outputs, firmware packages, and private signing material
+- Made the disclaimer and maintainer contact visible directly from the main GitHub README
 
 ## [4.0.0] - 2026-03-29
 
