@@ -1,0 +1,57 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 16,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "default",
+      "displayName": "默认（动态 Qt）",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "EDL_STATIC_QT": "OFF"
+      }
+    },
+    {
+      "name": "static-mingw",
+      "displayName": "MinGW + 静态 Qt（需改 CMAKE_PREFIX_PATH）",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build-static",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "EDL_STATIC_QT": "ON",
+        "CMAKE_PREFIX_PATH": "C:/Qt/6.5.0/mingw_static"
+      }
+    },
+    {
+      "name": "vcpkg-static-md",
+      "displayName": "vcpkg 静态 Qt（工程根目录 .\\vcpkg，需先拉取 bootstrap）",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build-vcpkg-static",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "EDL_STATIC_QT": "ON",
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_TARGET_TRIPLET": "x64-windows-static-md"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "default",
+      "configurePreset": "default"
+    },
+    {
+      "name": "static-mingw",
+      "configurePreset": "static-mingw"
+    },
+    {
+      "name": "vcpkg-static-md",
+      "configurePreset": "vcpkg-static-md"
+    }
+  ]
+}

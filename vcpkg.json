@@ -1,0 +1,10 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "edl",
+  "version": "0.1.0",
+  "description": "可选：vcpkg 拉取 Qt6 静态库（与 EDL_STATIC_QT 配合，见 docs/BUILD_STATIC.md）",
+  "dependencies": [
+    "qtbase",
+    "qtsvg"
+  ]
+}

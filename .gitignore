@@ -1,103 +1,67 @@
-# ============================================
-# 构建与输出 (Build results)
-# ============================================
-bin/
-obj/
-packages/
+# Build directories
+build/
+build-*/
+out/
 
-# 安装包输出
-installer/
-portable/
+# CMake / local presets
+CMakeUserPresets.json
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
 
-# ============================================
-# IDE 与用户文件
-# ============================================
+# Local dependency trees and caches
+vcpkg_installed/
+/vcpkg/
+.qtcreator/
+
+# IDE / editor
 .vs/
-*.rsuser
+.idea/
 *.user
 *.suo
-*.cache
-*.nrproj
-.nrproj
+*.opensdf
+*.sdf
+__pycache__/
+*.pyc
 
-# Cursor / 本地开发
-.cursor/
-agent-transcripts/
-terminals/
-
-# ============================================
-# 临时与系统文件
-# ============================================
-*.tmp
-*.log
-*.bak
-Thumbs.db
-.DS_Store
-nuget.exe
-
-# ============================================
-# 与主项目无关 — 不提交 GitHub
-# ============================================
-# 其他独立项目 / 工具
-php-server/
-RealmeAuth/
-mtkclient/
-FastbootTool/
-
-# 外部/参考源码（非本仓库一部分）
-edl-master/
-package_qualcomm_edl-master/
-gpttool/
-tools/
-oplus_ota_tool/
-FastbootEnhance-master/
-
-# 网站/数据库/资源包/大文件
-www-new/
-www.xiriacg.top_S8SDP/
-loaders_hjRRx/
-SprdResources/
-Payloads/
-
-# 内部文档（含流程/接口等，不公开）
-WORKLOG_REALME_FIREHOSE.md
-*REALME*.md
-
-# Realme 认证实现（不提交 GitHub，提交时请勿包含以下文件）
-Qualcomm/Services/RealmeSignService.cs
-Qualcomm/Services/RealmeCloudLoaderService.cs
-
-# 脚本与运行时数据（非源码）
-setup_payloads.bat
-node_modules/
-package-lock.json
-
-# ============================================
-# 非源码资源（固件/逆向/分析）
-# ============================================
-*.pak
-*.elf
-*.mbn
-*.melf
-
-# IDA Pro
-*.i64
-*.id0
-*.id1
-*.id2
-*.nam
-*.til
+# Compiled binaries and intermediate files
+*.exe
+*.dll
+*.lib
+*.a
+*.obj
+*.o
+*.pdb
+*.ilk
+*.exp
 *.idb
 
-# 压缩包（通常为数据/备份）
-*.7z
+# Archives and packaged outputs
 *.zip
+*.7z
 *.rar
+*.tar
+*.gz
+*.tgz
 
-# 临时分析
-*.py
-*_Report.txt
-*_report.txt
-*_analysis.txt
-*_props.txt
-super_*.txt
+# Firmware, loaders, dumps, and offline static data
+*.img
+*.mbn
+*.bin
+*.elf
+*.ofp
+*.ops
+*.payload
+*.rawprogram*
+*.patch*
+dump/
+dumps/
+firmware/
+fw/
+images/
+offline_data/
+
+# Keep bundled documentation, ignore bundled binary payloads
+/bundled/*.exe
+/bundled/*.img
+/bundled/misc_vendor/*.img

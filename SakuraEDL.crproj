@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<project outputDir="." baseDir="." seed="random" debug="false">
-  <!-- 仅混淆主程序 SakuraEDL.dll，preset 用 normal 避免破坏 WinForms 反射 -->
-  <rule pattern="true" preset="normal" inherit="false" />
-  <module path="SakuraEDL.dll" />
-  <probePath>.</probePath>
-</project>

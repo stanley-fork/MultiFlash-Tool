@@ -1,0 +1,49 @@
+<RCC>
+    <qresource prefix="/icons">
+        <file>icons/activate_boot_a.svg</file>
+        <file>icons/activate_boot_b.svg</file>
+        <file>icons/backup_fw.svg</file>
+        <file>icons/backup_gpt.svg</file>
+        <file>icons/backup_qcn.svg</file>
+        <file>icons/browse.svg</file>
+        <file>icons/close.svg</file>
+        <file>icons/deselect_all.svg</file>
+        <file>icons/disabled.svg</file>
+        <file>icons/erase_part.svg</file>
+        <file>icons/erase_userdata.svg</file>
+        <file>icons/factory_ext.svg</file>
+        <file>icons/factory_misc.svg</file>
+        <file>icons/factory_userdata.svg</file>
+        <file>icons/flash_fw.svg</file>
+        <file>icons/log.svg</file>
+        <file>icons/maximize.svg</file>
+        <file>icons/menu.svg</file>
+        <file>icons/minimize.svg</file>
+        <file>icons/partition.svg</file>
+        <file>icons/power_off.svg</file>
+        <file>icons/reboot_edl.svg</file>
+        <file>icons/reboot_fastboot.svg</file>
+        <file>icons/reboot_recovery.svg</file>
+        <file>icons/reboot_system.svg</file>
+        <file>icons/read_gpt.svg</file>
+        <file>icons/read_imei.svg</file>
+        <file>icons/read_info.svg</file>
+        <file>icons/read_part.svg</file>
+        <file>icons/read_storage_device.svg</file>
+        <file>icons/reboot.svg</file>
+        <file>icons/remove_frp.svg</file>
+        <file>icons/relock.svg</file>
+        <file>icons/restore_qcn.svg</file>
+        <file>icons/select_all.svg</file>
+        <file>icons/select_device.svg</file>
+        <file>icons/settings.svg</file>
+        <file>icons/unlock.svg</file>
+        <file>icons/wallpaper.svg</file>
+        <file>icons/write_gpt_xml.svg</file>
+        <file>icons/write_imei.svg</file>
+        <file>icons/write_part.svg</file>
+    </qresource>
+    <qresource prefix="/style">
+        <file>style/dark_theme.qss</file>
+    </qresource>
+</RCC>

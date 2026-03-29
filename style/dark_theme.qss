@@ -1,0 +1,943 @@
+/* ==========================================================
+   EDL Tool — 青绿 + 天蓝冷色主题
+   分层：大面板高透露壁纸；日志/配置/功能区为「主题色雾面半透明」(alpha~200–220)，
+   能看出壁纸与青绿/天蓝基调，文字与彩色日志仍可读。
+   主色 ACCENT #0D9488，辅色 SKY #0EA5E9。
+   ========================================================== */
+
+* { outline: none; }
+
+QWidget {
+    color: #0F172A;
+    font-family: "Segoe UI", "Microsoft YaHei UI", sans-serif;
+    font-size: 12px;
+    background: transparent;
+}
+
+QMainWindow {
+    background: transparent;
+}
+
+#centralwidget {
+    background: transparent;
+}
+
+/* ==================== Title Bar — 轻透冰青，露壁纸 ==================== */
+#titleBar {
+    background-color: rgba(255, 255, 255, 92);
+    border-bottom: 1px solid rgba(13, 148, 136, 22);
+}
+
+#titleLabel {
+    color: #0F766E;
+    font-size: 12px;
+    background: transparent;
+}
+
+/* 标题栏功能钮：青绿淡底，hover 略加深 */
+#menuButton, #settingsButton, #wallpaperButton, #logButton {
+    background-color: rgba(13, 148, 136, 10);
+    border: none;
+    border-radius: 6px;
+}
+#menuButton:hover, #settingsButton:hover, #wallpaperButton:hover, #logButton:hover {
+    background-color: rgba(13, 148, 136, 22);
+}
+#menuButton:pressed, #settingsButton:pressed, #wallpaperButton:pressed, #logButton:pressed {
+    background-color: rgba(13, 148, 136, 34);
+}
+
+#minimizeButton, #maximizeButton {
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+}
+#minimizeButton:hover, #maximizeButton:hover {
+    background-color: rgba(14, 165, 233, 18);
+}
+
+#closeButton {
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+}
+#closeButton:hover { background-color: rgba(220, 50, 40, 200); }
+#closeButton:pressed { background-color: rgba(180, 40, 30, 200); }
+
+/* ==================== Left Panel — 薄荷雾面（较透） ==================== */
+#leftPanel {
+    background-color: rgba(240, 253, 250, 72);
+    border-right: 1px solid rgba(13, 148, 136, 18);
+}
+
+#leftConfigWidget {
+    background-color: rgba(248, 252, 252, 200);
+    border-radius: 8px;
+    border: 1px solid rgba(13, 148, 136, 42);
+}
+
+#settingsLabel {
+    color: #0F766E;
+    font-size: 11px;
+    font-weight: 600;
+    background: transparent;
+    padding: 3px 0 2px 0;
+}
+
+/* ==================== CheckBox ==================== */
+QCheckBox {
+    spacing: 5px;
+    color: #0F172A;
+    background: transparent;
+    font-size: 12px;
+}
+
+QCheckBox::indicator {
+    width: 14px;
+    height: 14px;
+    border: 1px solid rgba(13, 148, 136, 45);
+    border-radius: 3px;
+    background-color: rgba(255, 255, 255, 218);
+}
+
+QCheckBox::indicator:checked {
+    background-color: #0D9488;
+    border-color: #0F766E;
+}
+
+QCheckBox::indicator:hover {
+    border-color: rgba(0, 0, 0, 35);
+}
+
+/* ==================== LineEdit — 半透明输入区（需配合 setAutoFillBackground(false)） ==================== */
+QLineEdit {
+    background-color: rgba(255, 255, 255, 185);
+    border: 1px solid rgba(13, 148, 136, 36);
+    border-radius: 4px;
+    padding: 4px 8px;
+    color: #0F172A;
+    font-size: 12px;
+    selection-background-color: rgba(13, 148, 136, 55);
+    selection-color: #FFFFFF;
+}
+
+QLineEdit:focus {
+    border-color: rgba(14, 165, 233, 85);
+}
+
+/* ==================== Browse Buttons ==================== */
+#firehoseBrowseBtn, #rawprogramBrowseBtn, #patchBrowseBtn,
+#digestBrowseBtn, #signatureBrowseBtn {
+    background-color: rgba(255, 255, 255, 210);
+    border: 1px solid rgba(13, 148, 136, 44);
+    border-radius: 4px;
+    color: #115E59;
+    font-weight: 600;
+    font-size: 13px;
+}
+#firehoseBrowseBtn:hover, #rawprogramBrowseBtn:hover, #patchBrowseBtn:hover,
+#digestBrowseBtn:hover, #signatureBrowseBtn:hover {
+    background-color: rgba(240, 253, 250, 232);
+    border-color: rgba(14, 165, 233, 58);
+}
+#firehoseBrowseBtn:pressed, #rawprogramBrowseBtn:pressed, #patchBrowseBtn:pressed,
+#digestBrowseBtn:pressed, #signatureBrowseBtn:pressed {
+    background-color: rgba(204, 251, 241, 228);
+}
+
+/* 左侧分割线 */
+#leftInnerSplitter::handle {
+    background: rgba(0, 0, 0, 8);
+    height: 3px;
+    margin: 1px 4px;
+}
+#leftInnerSplitter::handle:hover {
+    background: rgba(0, 0, 0, 18);
+}
+
+/* ==================== Log — 暖白雾面（需配合 viewport + setAutoFillBackground(false)） ==================== */
+QPlainTextEdit#logConsole {
+    background-color: rgba(255, 252, 248, 188);
+    border: 1px solid rgba(13, 148, 136, 50);
+    border-radius: 5px;
+    color: #0F172A;
+    font-family: "Consolas", "Cascadia Mono", "Courier New", monospace;
+    font-size: 11px;
+    padding: 6px 8px;
+    line-height: 1.35;
+    selection-background-color: rgba(13, 148, 136, 78);
+    selection-color: #FFFFFF;
+}
+QPlainTextEdit#logConsole QAbstractScrollArea::viewport {
+    background-color: rgba(255, 252, 248, 188);
+}
+
+/* 分区表搜索 */
+#partitionSearchLabel {
+    color: #0F766E;
+    font-size: 11px;
+    font-weight: 600;
+    background: transparent;
+}
+#partitionSearchEdit {
+    background-color: rgba(255, 255, 255, 185);
+    border: 1px solid rgba(13, 148, 136, 30);
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 11px;
+    min-height: 22px;
+}
+#partitionSearchEdit:focus {
+    border: 1px solid rgba(14, 165, 233, 80);
+}
+
+/* ==================== Right Panel — 天蓝雾面（较透） ==================== */
+#rightPanel {
+    background-color: rgba(239, 246, 255, 72);
+    border-left: 1px solid rgba(14, 165, 233, 20);
+}
+
+/* 右侧顶部：天蓝调雾面半透明 */
+#rightTopConfigCard {
+    background-color: rgba(248, 250, 255, 200);
+    border: 1px solid rgba(14, 165, 233, 42);
+    border-radius: 8px;
+}
+
+#rightSettingsLabel {
+    color: #0369A1;
+    font-size: 11px;
+    font-weight: 600;
+    background: transparent;
+    padding: 2px 0;
+}
+
+#storageLabel, #speedIconLabel, #timeIconLabel {
+    color: #64748B;
+    font-size: 11px;
+    font-weight: 500;
+    background: transparent;
+}
+
+#speedValueLabel, #timeValueLabel {
+    color: #0F172A;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: "Consolas", "Cascadia Mono", monospace;
+    background: transparent;
+}
+
+/* ==================== ComboBox ==================== */
+QComboBox {
+    background-color: rgba(255, 255, 255, 218);
+    border: 1px solid rgba(14, 165, 233, 28);
+    border-radius: 4px;
+    padding: 4px 28px 4px 8px;
+    color: #0F172A;
+    font-size: 12px;
+    min-width: 100px;
+}
+
+QComboBox:hover {
+    border-color: rgba(14, 165, 233, 55);
+}
+
+QComboBox::drop-down {
+    border: none;
+    width: 22px;
+}
+
+QComboBox::down-arrow {
+    width: 10px;
+    height: 10px;
+}
+
+QComboBox QAbstractItemView {
+    background-color: rgba(255, 255, 255, 250);
+    border: 1px solid rgba(13, 148, 136, 28);
+    selection-background-color: rgba(13, 148, 136, 22);
+    selection-color: #0F172A;
+    padding: 2px;
+    outline: none;
+}
+
+#storageLabel {
+    color: #0F766E;
+    font-size: 12px;
+    background: transparent;
+}
+
+/* ==================== Function Tab Widget ==================== */
+#funcTabWidget {
+    background-color: rgba(248, 250, 252, 55);
+}
+
+#funcTabWidget::pane {
+    background-color: rgba(250, 252, 254, 78);
+    border: 1px solid rgba(13, 148, 136, 20);
+    border-top: none;
+}
+
+#funcTabWidget > QTabBar {
+    background-color: rgba(241, 245, 249, 85);
+}
+
+#funcTabWidget > QTabBar::tab {
+    background-color: transparent;
+    color: #64748B;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 6px 12px;
+    font-size: 12px;
+    min-width: 50px;
+}
+
+#funcTabWidget > QTabBar::tab:selected {
+    color: #0F172A;
+    border-bottom-color: #0D9488;
+    font-weight: 600;
+}
+
+#funcTabWidget > QTabBar::tab:hover:!selected {
+    color: #0D9488;
+    background-color: rgba(13, 148, 136, 10);
+}
+
+/* ==================== Action Buttons — 功能区半透明卡片 ==================== */
+#readInfoBtn, #readStorageDeviceInfoBtn, #readGptBtn, #writeGptXmlBtn, #removeFrpBtn,
+#eraseUserdataBtn, #rebootBtn, #activateBootSlotBtn {
+    background-color: rgba(255, 255, 255, 198);
+    border: 1px solid rgba(13, 148, 136, 40);
+    border-radius: 6px;
+    color: #134E4A;
+    font-size: 12px;
+    text-align: left;
+    padding-left: 40px;
+}
+
+#readInfoBtn:hover, #readStorageDeviceInfoBtn:hover, #readGptBtn:hover, #writeGptXmlBtn:hover, #removeFrpBtn:hover,
+#eraseUserdataBtn:hover, #rebootBtn:hover, #activateBootSlotBtn:hover {
+    background-color: rgba(255, 255, 255, 232);
+    border-color: rgba(14, 165, 233, 52);
+}
+
+#readInfoBtn:pressed, #readStorageDeviceInfoBtn:pressed, #readGptBtn:pressed, #writeGptXmlBtn:pressed, #removeFrpBtn:pressed,
+#eraseUserdataBtn:pressed, #rebootBtn:pressed, #activateBootSlotBtn:pressed {
+    background-color: rgba(204, 251, 241, 218);
+}
+
+#rebootBtn::menu-indicator, #activateBootSlotBtn::menu-indicator {
+    width: 0; height: 0;
+}
+
+/* ==================== Partition Table — 半透明（单元格勿被原生调色板盖住） ==================== */
+#partitionTable {
+    background-color: rgba(255, 255, 255, 155);
+    alternate-background-color: rgba(236, 253, 245, 145);
+    border: 1px solid rgba(13, 148, 136, 36);
+    border-radius: 4px;
+    gridline-color: rgba(13, 148, 136, 12);
+    color: #0F172A;
+    font-size: 11px;
+    selection-background-color: rgba(13, 148, 136, 55);
+    selection-color: #0F172A;
+}
+
+#partitionTable QAbstractScrollArea::viewport {
+    background-color: rgba(255, 255, 255, 150);
+}
+
+/* item 用透明底，行间交替由表格 alternate-background-color 绘制（QSS 无可靠 item:alternate） */
+#partitionTable::item {
+    background-color: transparent;
+    color: #0F172A;
+    padding: 2px 4px;
+}
+
+#partitionTable::item:selected {
+    background-color: rgba(13, 148, 136, 100);
+    color: #0F172A;
+}
+
+#partitionTable QHeaderView::section {
+    background-color: rgba(204, 251, 241, 175);
+    color: #0F766E;
+    border: none;
+    border-bottom: 1px solid rgba(13, 148, 136, 28);
+    border-right: 1px solid rgba(14, 165, 233, 14);
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* Partition 行内按钮 + 全选/取消全选 */
+#readPartBtn, #writePartBtn, #erasePartBtn,
+#partitionSelectAllBtn, #partitionDeselectAllBtn {
+    background-color: rgba(255, 255, 255, 175);
+    border: 1px solid rgba(13, 148, 136, 36);
+    border-radius: 5px;
+    color: #134E4A;
+    font-size: 12px;
+    padding: 4px 10px;
+}
+#readPartBtn:hover, #writePartBtn:hover, #erasePartBtn:hover,
+#partitionSelectAllBtn:hover, #partitionDeselectAllBtn:hover {
+    background-color: rgba(255, 255, 255, 220);
+    border-color: rgba(14, 165, 233, 55);
+}
+#readPartBtn:pressed, #writePartBtn:pressed, #erasePartBtn:pressed,
+#partitionSelectAllBtn:pressed, #partitionDeselectAllBtn:pressed {
+    background-color: rgba(186, 230, 253, 195);
+}
+
+/* ==================== Menu ==================== */
+#rebootMenu, #activateBootMenu, QMenu {
+    background-color: rgba(255, 255, 255, 250);
+    border: 1px solid rgba(13, 148, 136, 28);
+    padding: 4px 0;
+    font-size: 12px;
+    color: #0F172A;
+}
+
+#rebootMenu::item, #activateBootMenu::item {
+    padding: 6px 24px 6px 12px;
+    min-height: 24px;
+    background: transparent;
+    icon-size: 20px;
+}
+
+QMenu::item {
+    padding: 6px 24px 6px 16px;
+    background: transparent;
+}
+
+QMenu::item:selected {
+    background-color: rgba(13, 148, 136, 18);
+    color: #0F172A;
+}
+
+QMenu::separator {
+    height: 1px;
+    background-color: rgba(0, 0, 0, 6);
+    margin: 3px 8px;
+}
+
+/* ==================== Disabled Tab Overlay ==================== */
+#imeiDisabledLabel, #firmwareDisabledLabel {
+    background: transparent;
+    color: rgba(100, 116, 139, 150);
+    font-size: 16px;
+    font-weight: 600;
+}
+
+/* Auth section label */
+#authLabel {
+    color: #0F766E;
+    font-size: 11px;
+    font-weight: 600;
+    background: transparent;
+    padding: 3px 0 2px 0;
+}
+
+/* ==================== Progress Bar ==================== */
+QProgressBar {
+    background-color: rgba(255, 255, 255, 210);
+    border: 1px solid rgba(13, 148, 136, 38);
+    border-radius: 4px;
+    text-align: center;
+    color: #FFFFFF;
+    font-size: 11px;
+    font-weight: bold;
+    min-height: 28px;
+    max-height: 28px;
+}
+
+/* idle：青绿浅渐变 */
+QProgressBar[state="idle"]::chunk,
+QProgressBar::chunk {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 #5EEAD4,
+        stop:1 #14B8A6);
+}
+/* 进行中：蓝 */
+QProgressBar[state="running"]::chunk {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 #7DD3FC,
+        stop:0.5 #38BDF8,
+        stop:1 #0EA5E9);
+}
+/* 成功：绿 */
+QProgressBar[state="success"]::chunk {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 #86EFAC,
+        stop:0.5 #4ADE80,
+        stop:1 #22C55E);
+}
+/* 错误：红 */
+QProgressBar[state="error"]::chunk {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 #FCA5A5,
+        stop:0.5 #F87171,
+        stop:1 #EF4444);
+}
+/* 取消：雾青 */
+QProgressBar[state="cancelled"]::chunk {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 #A5F3FC,
+        stop:1 #67E8F9);
+}
+
+/* ==================== Cancel Button ==================== */
+#cancelButton {
+    background-color: rgba(255, 255, 255, 210);
+    border: 1px solid rgba(239, 68, 68, 42);
+    border-radius: 4px;
+    color: #B91C1C;
+    font-size: 12px;
+    padding: 3px 18px;
+}
+#cancelButton:hover {
+    background-color: rgba(254, 242, 242, 228);
+    color: #991B1B;
+}
+#cancelButton:pressed {
+    background-color: rgba(254, 226, 226, 218);
+}
+
+/* ==================== Bottom Bar ==================== */
+#bottomBar {
+    background-color: rgba(248, 250, 252, 88);
+    border-top: 1px solid rgba(13, 148, 136, 18);
+}
+
+/* ==================== Splitter ==================== */
+QSplitter {
+    background: transparent;
+}
+QSplitter::handle {
+    background-color: rgba(0, 0, 0, 0);
+    width: 1px;
+}
+
+/* ==================== Scrollbars ==================== */
+QScrollBar:vertical {
+    background: transparent;
+    width: 6px;
+    margin: 0;
+}
+QScrollBar::handle:vertical {
+    background-color: rgba(13, 148, 136, 38);
+    border-radius: 3px;
+    min-height: 20px;
+}
+QScrollBar::handle:vertical:hover { background-color: rgba(14, 165, 233, 55); }
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; }
+
+QScrollBar:horizontal {
+    background: transparent;
+    height: 6px;
+    margin: 0;
+}
+QScrollBar::handle:horizontal {
+    background-color: rgba(13, 148, 136, 38);
+    border-radius: 3px;
+    min-width: 20px;
+}
+QScrollBar::handle:horizontal:hover { background-color: rgba(14, 165, 233, 55); }
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: none; }
+
+/* ==================== Tooltips ==================== */
+QToolTip {
+    background-color: rgba(15, 77, 94, 242);
+    color: #ECFEFF;
+    border: 1px solid rgba(94, 234, 212, 45);
+    padding: 4px 6px;
+    font-size: 11px;
+}
+
+/* ==================== Dialog Common ==================== */
+#dialogCloseBtn {
+    background: transparent;
+    border: none;
+    border-radius: 14px;
+    font-size: 14px;
+    color: #64748B;
+}
+#dialogCloseBtn:hover {
+    background-color: rgba(220, 50, 40, 180);
+    color: #FFFFFF;
+}
+
+/* ==================== Settings Dialog ==================== */
+#settingsHeader {
+    background: transparent;
+}
+
+#settingsTitleLabel {
+    color: #0F172A;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    background: transparent;
+}
+
+#settingsSubtitleLabel {
+    color: #64748B;
+    font-size: 11px;
+    background: transparent;
+}
+
+#settingsHeaderSeparator {
+    color: rgba(0, 0, 0, 8);
+    background-color: rgba(0, 0, 0, 6);
+    border: none;
+    max-height: 1px;
+}
+
+#settingsScrollArea {
+    background: transparent;
+    border: none;
+}
+
+#settingsScrollContent {
+    background: transparent;
+}
+
+#settingsScrollArea QScrollBar:vertical {
+    width: 10px;
+    background: transparent;
+    margin: 0;
+}
+#settingsScrollArea QScrollBar::handle:vertical {
+    background: rgba(0, 0, 0, 12);
+    border-radius: 5px;
+    min-height: 36px;
+}
+#settingsScrollArea QScrollBar::add-line:vertical,
+#settingsScrollArea QScrollBar::sub-line:vertical {
+    height: 0;
+}
+
+#settingsFieldLabel {
+    color: #0F766E;
+    font-size: 12px;
+    background: transparent;
+}
+
+#settingsHintLabel {
+    color: #64748B;
+    font-size: 11px;
+    line-height: 1.45;
+    background: transparent;
+}
+
+#settingsLineEdit {
+    background-color: rgba(255, 255, 255, 242);
+    border: 1px solid rgba(13, 148, 136, 28);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 12px;
+    color: #0F172A;
+}
+#settingsLineEdit:focus {
+    border-color: rgba(14, 165, 233, 75);
+    background-color: rgba(255, 255, 255, 248);
+}
+
+#settingsGroup {
+    background-color: rgba(255, 255, 255, 232);
+    border: 1px solid rgba(13, 148, 136, 20);
+    border-radius: 8px;
+    padding: 16px 12px 12px 12px;
+    margin-top: 0;
+    font-size: 12px;
+    color: #0F172A;
+}
+#settingsGroup::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 0 4px;
+    margin-left: 4px;
+    color: #0D9488;
+    font-weight: 700;
+    font-size: 12px;
+}
+
+#settingsBrowseBtn {
+    background-color: rgba(204, 251, 241, 210);
+    border: 1px solid rgba(13, 148, 136, 32);
+    border-radius: 6px;
+    color: #115E59;
+    font-weight: 600;
+    font-size: 16px;
+}
+#settingsBrowseBtn:hover { background-color: rgba(167, 243, 208, 225); }
+#settingsBrowseBtn:pressed { background-color: rgba(153, 246, 228, 235); }
+
+#settingsFooterSeparator {
+    color: rgba(0, 0, 0, 8);
+    background-color: rgba(0, 0, 0, 6);
+    border: none;
+    max-height: 1px;
+}
+
+#settingsFooter {
+    background: transparent;
+}
+
+#settingsSaveBtn {
+    background-color: #0F766E;
+    border: none;
+    border-radius: 6px;
+    color: #FFFFFF;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 0 8px;
+}
+#settingsSaveBtn:hover { background-color: #0D9488; }
+#settingsSaveBtn:pressed { background-color: #115E59; }
+
+#settingsCancelBtn {
+    background-color: rgba(255, 255, 255, 228);
+    border: 1px solid rgba(14, 165, 233, 28);
+    border-radius: 6px;
+    color: #0369A1;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 0 8px;
+}
+#settingsCancelBtn:hover {
+    background-color: rgba(224, 242, 254, 235);
+    color: #0C4A6E;
+}
+
+/* ==================== Device Dialog ==================== */
+#deviceDialogRoot {
+    background: transparent;
+}
+
+#deviceDialogTitle {
+    color: #0F172A;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    background: transparent;
+}
+
+#deviceDialogSubtitle {
+    color: #64748B;
+    font-size: 12px;
+    line-height: 1.45;
+    background: transparent;
+}
+
+#deviceFilterBar {
+    background-color: rgba(255, 255, 255, 236);
+    border: 1px solid rgba(13, 148, 136, 22);
+    border-radius: 8px;
+}
+
+#deviceBrandLabel {
+    color: #0F766E;
+    font-size: 12px;
+    font-weight: 600;
+    background: transparent;
+    padding-right: 2px;
+}
+
+#deviceCountLabel {
+    color: #94A3B8;
+    font-size: 11px;
+    font-weight: 500;
+    background: transparent;
+}
+
+#deviceTableCard {
+    background-color: rgba(255, 255, 255, 238);
+    border: 1px solid rgba(13, 148, 136, 26);
+    border-radius: 8px;
+}
+
+#deviceDialogStack {
+    background: transparent;
+}
+
+#deviceDialogSeparator {
+    color: rgba(0, 0, 0, 8);
+    background-color: rgba(0, 0, 0, 6);
+    border: none;
+    max-height: 1px;
+}
+
+#deviceSearchEdit {
+    background-color: rgba(255, 255, 255, 242);
+    border: 1px solid rgba(13, 148, 136, 28);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: #0F172A;
+    min-height: 22px;
+}
+#deviceSearchEdit:focus {
+    border-color: rgba(14, 165, 233, 75);
+    background-color: rgba(255, 255, 255, 248);
+}
+
+#deviceBrandCombo {
+    background-color: rgba(255, 255, 255, 238);
+    border: 1px solid rgba(14, 165, 233, 28);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 12px;
+    color: #0F172A;
+    min-height: 28px;
+}
+#deviceBrandCombo:focus {
+    border-color: rgba(14, 165, 233, 75);
+}
+#deviceBrandCombo QAbstractItemView {
+    background-color: rgba(255, 255, 255, 250);
+    border: 1px solid rgba(13, 148, 136, 26);
+    border-radius: 4px;
+    selection-background-color: rgba(13, 148, 136, 22);
+    selection-color: #0F172A;
+    padding: 2px;
+}
+
+#deviceTable {
+    background-color: rgba(255, 255, 255, 242);
+    alternate-background-color: rgba(236, 253, 245, 232);
+    border: none;
+    border-radius: 7px;
+    gridline-color: transparent;
+    color: #0F172A;
+    font-size: 12px;
+    selection-background-color: rgba(13, 148, 136, 32);
+    selection-color: #0F172A;
+}
+
+#deviceTable::item {
+    border: none;
+    outline: none;
+    padding: 6px 10px;
+}
+#deviceTable::item:focus,
+#deviceTable::item:selected:focus {
+    outline: none;
+    border: none;
+}
+
+#deviceTable QHeaderView::section {
+    background-color: rgba(204, 251, 241, 228);
+    color: #0F766E;
+    border: none;
+    border-bottom: 1px solid rgba(0, 0, 0, 6);
+    border-right: 1px solid rgba(0, 0, 0, 4);
+    padding: 8px 10px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+#deviceTable QScrollBar:vertical {
+    width: 10px;
+    background: transparent;
+}
+#deviceTable QScrollBar::handle:vertical {
+    background: rgba(0, 0, 0, 12);
+    border-radius: 5px;
+    min-height: 28px;
+}
+#deviceTable QScrollBar::add-line:vertical, #deviceTable QScrollBar::sub-line:vertical {
+    height: 0;
+}
+
+#deviceEmptyHint {
+    color: #94A3B8;
+    font-size: 11px;
+    padding: 36px 28px;
+    background: transparent;
+}
+
+#dialogSelectBtn {
+    background-color: #0F766E;
+    border: none;
+    border-radius: 6px;
+    color: #FFFFFF;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 0 16px;
+}
+#dialogSelectBtn:hover { background-color: #0D9488; }
+#dialogSelectBtn:pressed { background-color: #115E59; }
+#dialogSelectBtn:disabled {
+    background-color: rgba(13, 148, 136, 45);
+    color: rgba(255, 255, 255, 180);
+}
+
+#dialogCancelBtn {
+    background-color: rgba(255, 255, 255, 228);
+    border: 1px solid rgba(14, 165, 233, 28);
+    border-radius: 6px;
+    color: #0369A1;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 0 16px;
+}
+#dialogCancelBtn:hover {
+    background-color: rgba(224, 242, 254, 235);
+    color: #0C4A6E;
+}
+
+/* ==================== Radio Button ==================== */
+QRadioButton {
+    spacing: 5px;
+    color: #0F172A;
+    background: transparent;
+    font-size: 12px;
+}
+
+QRadioButton::indicator {
+    width: 14px;
+    height: 14px;
+    border: 1px solid rgba(13, 148, 136, 45);
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 218);
+}
+
+QRadioButton::indicator:checked {
+    background-color: #0D9488;
+    border-color: #0F766E;
+}
+
+QRadioButton::indicator:hover {
+    border-color: rgba(0, 0, 0, 35);
+}
+
+/* ==================== 系统 QMessageBox：白底深字（避免继承透明/暗色导致看不清） ==================== */
+QMessageBox {
+    background-color: #FFFFFF;
+    border: 1px solid #CBD5E1;
+}
+QMessageBox QLabel {
+    color: #0F172A;
+    background-color: transparent;
+    min-width: 240px;
+}
+QMessageBox QDialogButtonBox QPushButton {
+    background-color: #F1F5F9;
+    color: #0F172A;
+    border: 1px solid #CBD5E1;
+    border-radius: 6px;
+    padding: 6px 18px;
+    min-width: 72px;
+    font-weight: 500;
+}
+QMessageBox QDialogButtonBox QPushButton:hover {
+    background-color: #E2E8F0;
+    border-color: #94A3B8;
+}
+QMessageBox QDialogButtonBox QPushButton:pressed {
+    background-color: #CBD5E1;
+}

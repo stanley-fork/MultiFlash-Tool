@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <defs>
+    <linearGradient id="bootAG" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34D399"/>
+      <stop offset="50%" stop-color="#22C55E"/>
+      <stop offset="100%" stop-color="#15803D"/>
+    </linearGradient>
+  </defs>
+  <rect x="3" y="3" width="18" height="18" rx="4" fill="#0F172A" stroke="url(#bootAG)" stroke-width="1.2"/>
+  <text x="12" y="16.5" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="url(#bootAG)" text-anchor="middle">A</text>
+</svg>

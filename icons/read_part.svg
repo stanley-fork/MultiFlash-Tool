@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+  <!-- HDD/storage disk -->
+  <rect x="2" y="4" width="20" height="16" rx="2" stroke="#4A7C59" fill="#4A7C59" fill-opacity="0.12"/>
+  <line x1="2" y1="14" x2="22" y2="14" stroke="#4A7C59"/>
+  <circle cx="18" cy="17" r="1.2" fill="#4A7C59"/>
+  <!-- Upload arrow (read = out of device) -->
+  <path d="M12 12V6" stroke="#4A7C59" stroke-width="2"/>
+  <path d="M9 8l3-3 3 3" stroke="#4A7C59" stroke-width="2"/>
+</svg>

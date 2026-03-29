@@ -1,0 +1,1548 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1120</width>
+    <height>680</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>960</width>
+    <height>580</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>SAKURAEDL</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="mainLayout">
+    <property name="spacing">
+     <number>0</number>
+    </property>
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
+    <item>
+     <layout class="QHBoxLayout" name="titleBarLayout">
+      <property name="spacing">
+       <number>4</number>
+      </property>
+      <property name="leftMargin">
+       <number>6</number>
+      </property>
+      <property name="topMargin">
+       <number>4</number>
+      </property>
+      <property name="rightMargin">
+       <number>6</number>
+      </property>
+      <property name="bottomMargin">
+       <number>4</number>
+      </property>
+      <item>
+       <widget class="QPushButton" name="menuButton">
+        <property name="minimumSize">
+         <size>
+          <width>38</width>
+          <height>34</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>38</width>
+          <height>34</height>
+         </size>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>20</width>
+          <height>20</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="titleLeftSpacer">
+        <property name="orientation">
+         <enum>Qt::Orientation::Horizontal</enum>
+        </property>
+        <property name="sizeType">
+         <enum>QSizePolicy::Policy::Fixed</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>6</width>
+          <height>0</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="titleLabel">
+        <property name="text">
+         <string>SAKURAEDL | QQ群 612824646</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="titleStretch">
+        <property name="orientation">
+         <enum>Qt::Orientation::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="settingsButton">
+        <property name="minimumSize">
+         <size>
+          <width>32</width>
+          <height>32</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>32</width>
+          <height>32</height>
+         </size>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>18</width>
+          <height>18</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="wallpaperButton">
+        <property name="minimumSize">
+         <size>
+          <width>32</width>
+          <height>32</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>32</width>
+          <height>32</height>
+         </size>
+        </property>
+        <property name="toolTip">
+         <string>从设置中的 API 重新加载主题背景</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>18</width>
+          <height>18</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="logButton">
+        <property name="minimumSize">
+         <size>
+          <width>32</width>
+          <height>32</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>32</width>
+          <height>32</height>
+         </size>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>18</width>
+          <height>18</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="titleBtnSpacer">
+        <property name="orientation">
+         <enum>Qt::Orientation::Horizontal</enum>
+        </property>
+        <property name="sizeType">
+         <enum>QSizePolicy::Policy::Fixed</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>8</width>
+          <height>0</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="minimizeButton">
+        <property name="minimumSize">
+         <size>
+          <width>32</width>
+          <height>32</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>32</width>
+          <height>32</height>
+         </size>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>16</width>
+          <height>16</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="maximizeButton">
+        <property name="minimumSize">
+         <size>
+          <width>32</width>
+          <height>32</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>32</width>
+          <height>32</height>
+         </size>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>16</width>
+          <height>16</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="closeButton">
+        <property name="minimumSize">
+         <size>
+          <width>32</width>
+          <height>32</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>32</width>
+          <height>32</height>
+         </size>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>16</width>
+          <height>16</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QSplitter" name="contentSplitter">
+      <property name="orientation">
+       <enum>Qt::Orientation::Horizontal</enum>
+      </property>
+      <property name="handleWidth">
+       <number>1</number>
+      </property>
+      <widget class="QWidget" name="leftPanel">
+       <layout class="QVBoxLayout" name="leftLayout">
+        <property name="spacing">
+         <number>0</number>
+        </property>
+        <property name="leftMargin">
+         <number>2</number>
+        </property>
+        <property name="topMargin">
+         <number>2</number>
+        </property>
+        <property name="rightMargin">
+         <number>2</number>
+        </property>
+        <property name="bottomMargin">
+         <number>2</number>
+        </property>
+        <item>
+         <widget class="QSplitter" name="leftInnerSplitter">
+          <property name="orientation">
+           <enum>Qt::Orientation::Vertical</enum>
+          </property>
+          <property name="childrenCollapsible">
+           <bool>false</bool>
+          </property>
+          <widget class="QWidget" name="leftConfigWidget">
+           <layout class="QVBoxLayout" name="leftConfigLayout">
+            <property name="spacing">
+             <number>1</number>
+            </property>
+            <property name="leftMargin">
+             <number>4</number>
+            </property>
+            <property name="topMargin">
+             <number>2</number>
+            </property>
+            <property name="rightMargin">
+             <number>2</number>
+            </property>
+            <property name="bottomMargin">
+             <number>1</number>
+            </property>
+            <item>
+             <widget class="QLabel" name="settingsLabel">
+              <property name="text">
+               <string>配置</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="firehoseLayout">
+              <property name="spacing">
+               <number>6</number>
+              </property>
+              <item>
+               <widget class="QCheckBox" name="firehoseCheckBox">
+                <property name="minimumSize">
+                 <size>
+                  <width>76</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>76</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Firehose</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLineEdit" name="firehoseLineEdit">
+                <property name="placeholderText">
+                 <string>选择 Firehose 加载器 (prog_*.mbn)</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="firehoseBrowseBtn">
+                <property name="minimumSize">
+                 <size>
+                  <width>32</width>
+                  <height>24</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>32</width>
+                  <height>24</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>...</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="rawprogramLayout">
+              <property name="spacing">
+               <number>6</number>
+              </property>
+              <item>
+               <widget class="QCheckBox" name="rawprogramCheckBox">
+                <property name="minimumSize">
+                 <size>
+                  <width>88</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>16777215</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Raw XML</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLineEdit" name="rawprogramLineEdit">
+                <property name="placeholderText">
+                 <string>选择 rawprogram*.xml（支持多选）</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="rawprogramBrowseBtn">
+                <property name="minimumSize">
+                 <size>
+                  <width>32</width>
+                  <height>24</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>32</width>
+                  <height>24</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>...</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="patchLayout">
+              <property name="spacing">
+               <number>6</number>
+              </property>
+              <item>
+               <widget class="QCheckBox" name="patchCheckBox">
+                <property name="minimumSize">
+                 <size>
+                  <width>76</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>76</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Patch XML</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLineEdit" name="patchLineEdit">
+                <property name="placeholderText">
+                 <string>选择 patch*.xml（支持多选）</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="patchBrowseBtn">
+                <property name="minimumSize">
+                 <size>
+                  <width>32</width>
+                  <height>24</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>32</width>
+                  <height>24</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>...</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="writeFileLengthOnlyCheckBox">
+              <property name="visible">
+               <bool>false</bool>
+              </property>
+              <property name="toolTip">
+               <string>勾选：镜像短于 GPT 分区大小时只写入镜像实际长度（与 SAKURAEDL 一致），不向后端填 0，可降低误伤分区尾部导致无法开机。取消：按 GPT 声明长度写满，不足处填 0（旧版/rawprogram 习惯）。主 GPT / 备份 GPT 分区名不受此项影响。</string>
+              </property>
+              <property name="text">
+               <string>仅按镜像长度写入（SAKURAEDL）</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="fixGptAfterWriteCheckBox">
+              <property name="visible">
+               <bool>false</bool>
+              </property>
+              <property name="toolTip">
+               <string>部分 Firehose 对 fixgpt 响应异常会破坏刚写入的 GPT；若其他工具仅写入 GPT 后分区正常，可取消勾选本项后重试。</string>
+              </property>
+              <property name="text">
+               <string>写入后执行 fixgpt（主备/CRC）</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="setBootableAfterFlashCheckBox">
+              <property name="visible">
+               <bool>false</bool>
+              </property>
+              <property name="toolTip">
+               <string>仅在使用 edl_service_flash_xml_ex 且传入「末尾激活」标志时由程序侧生效：rawprogram 中 PROGRAM 任务数须 ≥ 20 才会执行 setbootable，且槽位不明时默认倾向 Boot A。「分区表写入分区」与「写 GPT」按钮不再触发此项。完整刷机请用 API/脚本传入对应 flags。</string>
+              </property>
+              <property name="text">
+               <string>XML 大批量刷写末尾激活 Boot A（PROGRAM≥20）</string>
+              </property>
+              <property name="checked">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="authLabel">
+              <property name="text">
+               <string>认证</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="authTypeLayout">
+              <property name="spacing">
+               <number>2</number>
+              </property>
+              <item>
+               <widget class="QCheckBox" name="realmeAuthCheckBox">
+                <property name="toolTip">
+                 <string>Realme 云端签名：须在 Digest 下方填写「项目号」。RCSMAUTH 已内置默认值（可用 QSettings 覆盖）。与 OPLUS VIP 本地文件无关。</string>
+                </property>
+                <property name="text">
+                 <string>Realme</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="oplusAuthCheckBox">
+                <property name="toolTip">
+                 <string>OPLUS VIP：本地 Digest + Signature 文件串口认证（EnableVip=1 流程）。与「Realme」云端 RCSMAUTH 签名完全无关，勿混用。</string>
+                </property>
+                <property name="text">
+                 <string>OPLUS VIP</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="oneplusAuthCheckBox">
+                <property name="toolTip">
+                 <string>Demacia / SetProjModel 认证</string>
+                </property>
+                <property name="text">
+                 <string>OnePlus</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="xiaomiAuthCheckBox">
+                <property name="toolTip">
+                 <string>MiAuth 签名认证</string>
+                </property>
+                <property name="text">
+                 <string>Xiaomi</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="digestLayout">
+              <property name="spacing">
+               <number>6</number>
+              </property>
+              <item>
+               <widget class="QLabel" name="digestLabel">
+                <property name="minimumSize">
+                 <size>
+                  <width>72</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>72</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Digest</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLineEdit" name="digestLineEdit">
+                <property name="placeholderText">
+                 <string>VIP: 选择 Digest 文件 (Hash Segment)</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="digestBrowseBtn">
+                <property name="minimumSize">
+                 <size>
+                  <width>32</width>
+                  <height>24</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>32</width>
+                  <height>24</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>...</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="realmeProjectLayout">
+              <property name="spacing">
+               <number>6</number>
+              </property>
+              <item>
+               <widget class="QLabel" name="realmeProjectLabel">
+                <property name="minimumSize">
+                 <size>
+                  <width>72</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>72</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>仅 Realme：工程号 / projectNumber（Modern 对应 getsigndata 的 ProjectID）。与 OPLUS VIP 无关。</string>
+                </property>
+                <property name="text">
+                 <string>项目号</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLineEdit" name="realmeProjectNumberLineEdit">
+                <property name="toolTip">
+                 <string>对应 QSettings realme/projectNumber，连接前会写入配置。</string>
+                </property>
+                <property name="placeholderText">
+                 <string>必填：Realme 项目号 (projectNumber)</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QWidget" name="realmeProjectBrowsePlaceholder" native="true">
+                <property name="minimumSize">
+                 <size>
+                  <width>32</width>
+                  <height>24</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>32</width>
+                  <height>24</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="signatureLayout">
+              <property name="spacing">
+               <number>6</number>
+              </property>
+              <item>
+               <widget class="QLabel" name="signatureLabel">
+                <property name="minimumSize">
+                 <size>
+                  <width>72</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>72</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Signature</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLineEdit" name="signatureLineEdit">
+                <property name="placeholderText">
+                 <string>VIP: 选择 Signature 文件 (RSA-2048)</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="signatureBrowseBtn">
+                <property name="minimumSize">
+                 <size>
+                  <width>32</width>
+                  <height>24</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>32</width>
+                  <height>24</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>...</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QPlainTextEdit" name="logConsole">
+           <property name="lineWrapMode">
+            <enum>QPlainTextEdit::LineWrapMode::WidgetWidth</enum>
+           </property>
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="rightPanel">
+       <layout class="QVBoxLayout" name="rightLayout">
+        <property name="spacing">
+         <number>4</number>
+        </property>
+        <property name="leftMargin">
+         <number>10</number>
+        </property>
+        <property name="topMargin">
+         <number>8</number>
+        </property>
+        <property name="rightMargin">
+         <number>10</number>
+        </property>
+        <property name="bottomMargin">
+         <number>4</number>
+        </property>
+        <item>
+         <layout class="QVBoxLayout" name="rightTopConfigCardLayout">
+          <property name="spacing">
+           <number>4</number>
+          </property>
+          <property name="leftMargin">
+           <number>8</number>
+          </property>
+          <property name="topMargin">
+           <number>6</number>
+          </property>
+          <property name="rightMargin">
+           <number>8</number>
+          </property>
+          <property name="bottomMargin">
+           <number>8</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="rightSettingsLabel">
+            <property name="text">
+             <string>配置</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="readSysInfoCheckBox">
+            <property name="text">
+             <string>读取设备信息</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="storageLayout">
+            <property name="spacing">
+             <number>8</number>
+            </property>
+            <item>
+             <widget class="QLabel" name="storageLabel">
+              <property name="minimumSize">
+               <size>
+                <width>60</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>存储类型</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="storageCombo">
+              <item>
+               <property name="text">
+                <string>自动检测</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>eMMC</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>UFS</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item>
+             <spacer name="storageMidSpacer">
+              <property name="orientation">
+               <enum>Qt::Orientation::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="QLabel" name="speedIconLabel">
+              <property name="minimumSize">
+               <size>
+                <width>30</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>速度</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="speedValueLabel">
+              <property name="minimumSize">
+               <size>
+                <width>70</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>-- MB/s</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="speedTimeSpacer">
+              <property name="orientation">
+               <enum>Qt::Orientation::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>10</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="QLabel" name="timeIconLabel">
+              <property name="minimumSize">
+               <size>
+                <width>30</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>已用时间 · 预计剩余（按当前平均速度）</string>
+              </property>
+              <property name="text">
+               <string>时间</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="timeValueLabel">
+              <property name="minimumSize">
+               <size>
+                <width>168</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>已用时间 · 预计剩余</string>
+              </property>
+              <property name="text">
+               <string>--:--</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QTabWidget" name="funcTabWidget">
+          <property name="currentIndex">
+           <number>3</number>
+          </property>
+          <widget class="QWidget" name="generalTab">
+           <attribute name="title">
+            <string>通用</string>
+           </attribute>
+           <layout class="QVBoxLayout" name="generalLayout">
+            <property name="spacing">
+             <number>5</number>
+            </property>
+            <property name="leftMargin">
+             <number>6</number>
+            </property>
+            <property name="topMargin">
+             <number>8</number>
+            </property>
+            <property name="rightMargin">
+             <number>6</number>
+            </property>
+            <property name="bottomMargin">
+             <number>6</number>
+            </property>
+            <item>
+             <widget class="QPushButton" name="readInfoBtn">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>36</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>   读取信息</string>
+              </property>
+              <property name="iconSize">
+               <size>
+                <width>24</width>
+                <height>24</height>
+               </size>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="readStorageDeviceInfoBtn">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>36</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>发送 Firehose getstorageinfo，解析 UFS/eMMC 字库（存储芯片）型号、容量、LUN 等并输出到日志。</string>
+              </property>
+              <property name="text">
+               <string>   读取字库设备信息</string>
+              </property>
+              <property name="icon">
+               <iconset resource="resources.qrc">
+                <normaloff>:/icons/icons/read_storage_device.svg</normaloff>:/icons/icons/read_storage_device.svg</iconset>
+              </property>
+              <property name="iconSize">
+               <size>
+                <width>24</width>
+                <height>24</height>
+               </size>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="readGptBtn">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>36</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>   读取分区表</string>
+              </property>
+              <property name="iconSize">
+               <size>
+                <width>24</width>
+                <height>24</height>
+               </size>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="writeGptXmlBtn">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>36</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>   写 GPT</string>
+              </property>
+              <property name="iconSize">
+               <size>
+                <width>24</width>
+                <height>24</height>
+               </size>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="removeFrpBtn">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>36</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>   移除 FRP</string>
+              </property>
+              <property name="iconSize">
+               <size>
+                <width>24</width>
+                <height>24</height>
+               </size>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="factoryResetBtn">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>36</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>点击后选择厂商：自动写入对应 misc_wipedata_*.img 并重启（需已连接设备并配置 Firehose）。</string>
+              </property>
+              <property name="text">
+               <string>   恢复出厂 ▾</string>
+              </property>
+              <property name="iconSize">
+               <size>
+                <width>24</width>
+                <height>24</height>
+               </size>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="rebootBtn">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>36</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>   重启设备 ▾</string>
+              </property>
+              <property name="iconSize">
+               <size>
+                <width>24</width>
+                <height>24</height>
+               </size>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="activateBootSlotBtn">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>36</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>发送 Firehose setbootablestoragedrive。eMMC 通常为单 LUN（value=0）；UFS A/B 常见为 Boot A→1、Boot B→2（与 SAKURAEDL 一致）。与重启不同，仅切换可启动存储路径。</string>
+              </property>
+              <property name="text">
+               <string>   激活启动分区 ▾</string>
+              </property>
+              <property name="iconSize">
+               <size>
+                <width>24</width>
+                <height>24</height>
+               </size>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="generalSpacer">
+              <property name="orientation">
+               <enum>Qt::Orientation::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>0</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="partitionTab">
+           <attribute name="title">
+            <string>分区表</string>
+           </attribute>
+           <layout class="QVBoxLayout" name="partitionLayout">
+            <property name="spacing">
+             <number>4</number>
+            </property>
+            <property name="leftMargin">
+             <number>6</number>
+            </property>
+            <property name="topMargin">
+             <number>6</number>
+            </property>
+            <property name="rightMargin">
+             <number>6</number>
+            </property>
+            <property name="bottomMargin">
+             <number>6</number>
+            </property>
+            <item>
+             <layout class="QHBoxLayout" name="partitionSearchLayout">
+              <property name="spacing">
+               <number>6</number>
+              </property>
+              <item>
+               <widget class="QLabel" name="partitionSearchLabel">
+                <property name="text">
+                 <string>搜索分区</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLineEdit" name="partitionSearchEdit">
+                <property name="placeholderText">
+                 <string>按名称筛选（不区分大小写）</string>
+                </property>
+                <property name="clearButtonEnabled">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="partitionSelectAllBtn">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>28</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>全选</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="partitionDeselectAllBtn">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>28</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>全不选</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QTableWidget" name="partitionTable">
+              <property name="editTriggers">
+               <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+              </property>
+              <property name="alternatingRowColors">
+               <bool>true</bool>
+              </property>
+              <property name="selectionMode">
+               <enum>QAbstractItemView::SelectionMode::ExtendedSelection</enum>
+              </property>
+              <property name="selectionBehavior">
+               <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
+              </property>
+              <property name="showGrid">
+               <bool>true</bool>
+              </property>
+              <property name="columnCount">
+               <number>6</number>
+              </property>
+              <column>
+               <property name="text">
+                <string>分区名称</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>起始扇区</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>扇区数</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>大小</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>LUN</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>镜像文件</string>
+               </property>
+              </column>
+             </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="partActionLayout">
+              <property name="spacing">
+               <number>6</number>
+              </property>
+              <item>
+               <widget class="QPushButton" name="readPartBtn">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>32</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>读取分区</string>
+                </property>
+                <property name="iconSize">
+                 <size>
+                  <width>18</width>
+                  <height>18</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="writePartBtn">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>32</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>写入分区</string>
+                </property>
+                <property name="iconSize">
+                 <size>
+                  <width>18</width>
+                  <height>18</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="erasePartBtn">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>32</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>擦除分区</string>
+                </property>
+                <property name="iconSize">
+                 <size>
+                  <width>18</width>
+                  <height>18</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="imeiTab">
+           <attribute name="title">
+            <string>IMEI</string>
+           </attribute>
+           <layout class="QVBoxLayout" name="imeiLayout">
+            <property name="spacing">
+             <number>0</number>
+            </property>
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+            <item>
+             <widget class="QLabel" name="imeiDisabledLabel">
+              <property name="text">
+               <string/>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="firmwareTab">
+           <attribute name="title">
+            <string>固件</string>
+           </attribute>
+           <layout class="QVBoxLayout" name="firmwareLayout">
+            <property name="spacing">
+             <number>0</number>
+            </property>
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+            <item>
+             <widget class="QLabel" name="firmwareDisabledLabel">
+              <property name="text">
+               <string/>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="bottomLayout">
+      <property name="spacing">
+       <number>8</number>
+      </property>
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>2</number>
+      </property>
+      <property name="rightMargin">
+       <number>8</number>
+      </property>
+      <property name="bottomMargin">
+       <number>2</number>
+      </property>
+      <item>
+       <widget class="QProgressBar" name="progressBar">
+        <property name="value">
+         <number>0</number>
+        </property>
+        <property name="textVisible">
+         <bool>true</bool>
+        </property>
+        <property name="format">
+         <string>%p%</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="cancelButton">
+        <property name="minimumSize">
+         <size>
+          <width>80</width>
+          <height>26</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>取消</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+  <action name="actionActivateBootA">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/icons/activate_boot_a.svg</normaloff>:/icons/icons/activate_boot_a.svg</iconset>
+   </property>
+   <property name="text">
+    <string>激活 Boot A</string>
+   </property>
+   <property name="toolTip">
+    <string>UFS：setbootablestoragedrive(1)。eMMC：单 LUN 为 value=0。</string>
+   </property>
+  </action>
+  <action name="actionActivateBootB">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/icons/activate_boot_b.svg</normaloff>:/icons/icons/activate_boot_b.svg</iconset>
+   </property>
+   <property name="text">
+    <string>激活 Boot B</string>
+   </property>
+   <property name="toolTip">
+    <string>UFS：setbootablestoragedrive(2)。eMMC：单 LUN 为 value=0（与 Boot A 相同）。</string>
+   </property>
+  </action>
+  <action name="actionRebootSys">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/icons/reboot_system.svg</normaloff>:/icons/icons/reboot_system.svg</iconset>
+   </property>
+   <property name="text">
+    <string>重启到系统</string>
+   </property>
+  </action>
+  <action name="actionRebootFastboot">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/icons/reboot_fastboot.svg</normaloff>:/icons/icons/reboot_fastboot.svg</iconset>
+   </property>
+   <property name="text">
+    <string>重启到 Fastbootd（写 MISC 后重启）</string>
+   </property>
+   <property name="toolTip">
+    <string>将镜像完整写入 misc 分区后发送 power reset。默认使用 misc_tofastbootd.img（程序目录、或编译嵌入 bundled/）；也可在「设置」自定义。</string>
+   </property>
+  </action>
+  <action name="actionRebootRecovery">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/icons/reboot_recovery.svg</normaloff>:/icons/icons/reboot_recovery.svg</iconset>
+   </property>
+   <property name="text">
+    <string>重启到 Recovery（写 MISC 后重启）</string>
+   </property>
+   <property name="toolTip">
+    <string>使用 Recovery 用 MISC 镜像。默认 misc_torecovery.img（程序目录或编译嵌入 bundled/）；兼容旧名 misc_recovery.bin；可在「设置」自定义。</string>
+   </property>
+  </action>
+  <action name="actionRebootEdl">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/icons/reboot_edl.svg</normaloff>:/icons/icons/reboot_edl.svg</iconset>
+   </property>
+   <property name="text">
+    <string>重启到 EDL（9008）</string>
+   </property>
+   <property name="toolTip">
+    <string>发送 Firehose power download（部分机支持；否则请用音量键或 adb reboot edl）。</string>
+   </property>
+  </action>
+  <action name="actionRebootOff">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/icons/power_off.svg</normaloff>:/icons/icons/power_off.svg</iconset>
+   </property>
+   <property name="text">
+    <string>关机</string>
+   </property>
+  </action>
+ </widget>
+ <resources>
+  <include location="resources.qrc"/>
+ </resources>
+ <connections/>
+</ui>
