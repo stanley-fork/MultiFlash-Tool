@@ -1,33 +1,37 @@
 # SakuraEDL
 
-[![Platform](https://img.shields.io/badge/Platform-Windows-0078D6?logo=windows)](https://www.microsoft.com/windows)
-[![CMake](https://img.shields.io/badge/CMake-3.16+-064F8C?logo=cmake)](https://cmake.org/)
-[![Qt](https://img.shields.io/badge/Qt-6-41CD52?logo=qt)](https://www.qt.io/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+<p align="center">
+  <strong>Native Windows Service Tool for Qualcomm EDL Workflows</strong><br/>
+  Sahara, Firehose, GPT, partition operations, Android property extraction, and vendor authentication support in a single Qt desktop application.
+</p>
 
-SakuraEDL is a Windows desktop tool for Qualcomm EDL service workflows. It uses a Qt Widgets frontend and a native C/C++ backend for Sahara, Firehose, GPT handling, partition read/write operations, storage reporting, and Android property extraction from device partitions.
+<p align="center">
+  <a href="https://github.com/xiriovo/SakuraEDL/actions/workflows/windows-build.yml"><img src="https://img.shields.io/github/actions/workflow/status/xiriovo/SakuraEDL/windows-build.yml?branch=main&label=Windows%20Build" alt="Windows Build"></a>
+  <a href="https://github.com/xiriovo/SakuraEDL/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License"></a>
+  <a href="https://www.qt.io/"><img src="https://img.shields.io/badge/Qt-6-41CD52?logo=qt" alt="Qt 6"></a>
+  <a href="https://cmake.org/"><img src="https://img.shields.io/badge/CMake-3.16+-064F8C?logo=cmake" alt="CMake"></a>
+  <a href="https://www.microsoft.com/windows"><img src="https://img.shields.io/badge/Platform-Windows-0078D6?logo=windows" alt="Windows"></a>
+</p>
 
-The current `main` branch tracks the native Qt/CMake implementation of SakuraEDL.
+<p align="center">
+  <a href="#build-from-source"><img src="https://img.shields.io/badge/Build-Quick%20Start-0F766E?style=for-the-badge" alt="Build Quick Start"></a>
+  <a href="#feature-overview"><img src="https://img.shields.io/badge/Guide-Feature%20Overview-1D4ED8?style=for-the-badge" alt="Feature Overview"></a>
+  <a href="#realme-authentication"><img src="https://img.shields.io/badge/Auth-Realme%20Flow-7C3AED?style=for-the-badge" alt="Realme Authentication"></a>
+  <a href="docs/BUILD_STATIC.md"><img src="https://img.shields.io/badge/Docs-Static%20Qt-EF4444?style=for-the-badge" alt="Static Qt Docs"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Project-Changelog-374151?style=for-the-badge" alt="Changelog"></a>
+</p>
 
-## What It Does
+> This repository tracks the native Qt/CMake implementation of SakuraEDL. Public source code and documentation are included. Build outputs, firmware packages, and private signing material are intentionally excluded.
 
-- Connects to Qualcomm devices in EDL mode and negotiates Sahara / Firehose sessions
-- Reads GPT layouts across UFS and eMMC devices, including multi-LUN targets
-- Reads, writes, erases, and zeroes partitions
-- Parses `rawprogram` and `patch` XML workflows
-- Extracts Android system information from ext4 and EROFS partition content
-- Includes vendor-specific authentication and compatibility logic for Realme / OPLUS, Xiaomi, and OnePlus device families
-- Provides a Windows GUI for device inspection, flashing, reboot actions, storage information, and service tasks
+## Product Overview
 
-## Project Status
+| Protocol Core | Device Insight | Service Operations |
+| --- | --- | --- |
+| Native Sahara and Firehose handling for Qualcomm EDL sessions, loader configuration, and partition transport. | GPT parsing, storage reporting, Android property extraction, and multi-partition metadata overlay logic. | Partition read/write/erase flows, XML-driven flashing, reboot helpers, and vendor-specific service paths. |
 
-| Area | Status |
-|------|--------|
-| Qualcomm EDL backend | Active |
-| Qt desktop UI | Active |
-| Android property parsing | Active |
-| Vendor auth integrations | Active |
-| MTK backend | Experimental |
+| Vendor Compatibility | Desktop UI | Build Flexibility |
+| --- | --- | --- |
+| Realme / OPLUS, Xiaomi, and OnePlus authentication and device-specific compatibility paths. | Qt Widgets interface for flashing, inspection, storage queries, and service actions on Windows. | Standard dynamic Qt builds and optional static Qt workflows through local Qt or `vcpkg`. |
 
 ## Feature Overview
 
@@ -36,46 +40,32 @@ The current `main` branch tracks the native Qt/CMake implementation of SakuraEDL
 - Sahara handshake and chip identification
 - Firehose loader configuration and session management
 - GPT parsing and partition discovery
-- Partition flashing and partition readback
-- Storage reporting for UFS and eMMC
-- XML-driven flashing workflows
+- Partition flashing, readback, erase, and zero-out operations
+- XML-driven `rawprogram` and `patch` workflows
+- Storage reporting for UFS and eMMC devices
 
-### Android System Info Extraction
+### Android System Information
 
 - Property probing from partition content without booting Android
 - ext4 and EROFS scanning paths
 - Overlay-style property resolution across multiple partitions
-- Device branding, model, build, OTA, region, locale, and vendor-specific metadata extraction
+- Extraction of branding, model, device codename, OTA data, build fields, locale, region, and vendor-specific metadata
 
 ### Vendor Authentication
 
 - Realme cloud-signing flow support
-- OPLUS VIP-style file-based flow support
+- OPLUS VIP-style file-based support
 - OnePlus-specific authentication path
 - Xiaomi-specific authentication path
 
-## Realme Authentication
+### Experimental MTK Backend
 
-SakuraEDL includes a dedicated Realme authentication path for devices that require authorization after Firehose configuration.
+- Low-level MTK backend scaffolding in `mtk_core/`
+- Intended for future integration and protocol expansion
 
-- Modern Realme devices use a `getsigndata -> cloud signing -> verify` flow and require a valid `ProjectID`.
-- Some legacy Realme devices require an additional `initdigest` step before `getsigndata`, so a digest file must be supplied.
-- Realme authentication in this codebase is designed around a backend signing callback. Private credentials, tokens, and signing material are intentionally not stored in this public repository.
-- Realme authentication is separate from the OPLUS VIP flow. OPLUS VIP is file-based and uses local digest / signature material, while Realme depends on server-side signing.
-- When a session is already in a direct Firehose state without the required Sahara / serial-side authentication context, the Realme serial authentication step is skipped.
+## Quick Start
 
-## Build Requirements
-
-- Windows 10 or Windows 11
-- CMake 3.16 or newer
-- Ninja
-- MSVC toolchain
-- Qt 6 Widgets / Svg / Network
-- Optional: `vcpkg` for static-Qt builds
-
-## Build From Source
-
-### Standard Build
+### Build From Source
 
 ```powershell
 cmake --preset default
@@ -89,9 +79,32 @@ cmake --preset vcpkg-static-md
 cmake --build --preset vcpkg-static-md
 ```
 
-If you use a custom static Qt installation instead of `vcpkg`, review:
+Additional build notes:
 
 - [`docs/BUILD_STATIC.md`](docs/BUILD_STATIC.md)
+
+## Realme Authentication
+
+SakuraEDL includes a dedicated Realme authentication path for devices that require authorization after Firehose configuration.
+
+- Modern Realme devices use a `getsigndata -> cloud signing -> verify` flow and require a valid `ProjectID`.
+- Some legacy Realme devices require an additional `initdigest` step before `getsigndata`, so a digest file must be supplied.
+- Realme authentication in this codebase is designed around a backend signing callback. Private credentials, tokens, and signing material are intentionally not stored in this public repository.
+- Realme authentication is separate from the OPLUS VIP flow. OPLUS VIP is file-based and uses local digest / signature material, while Realme depends on server-side signing.
+- When a session is already in a direct Firehose state without the required Sahara / serial-side authentication context, the Realme serial authentication step is skipped.
+
+Related note:
+
+- [`docs/REALME_VS_OPLUS_VIP.md`](docs/REALME_VS_OPLUS_VIP.md)
+
+## Build Requirements
+
+- Windows 10 or Windows 11
+- CMake 3.16 or newer
+- Ninja
+- MSVC toolchain
+- Qt 6 Widgets / Svg / Network
+- Optional: `vcpkg` for static-Qt builds
 
 ## Repository Layout
 
@@ -108,8 +121,8 @@ If you use a custom static Qt installation instead of `vcpkg`, review:
 - [`docs/SAHARA.md`](docs/SAHARA.md)
 - [`docs/WRITE_PARTITION.md`](docs/WRITE_PARTITION.md)
 - [`docs/BOOT_SLOT.md`](docs/BOOT_SLOT.md)
-- [`docs/REALME_VS_OPLUS_VIP.md`](docs/REALME_VS_OPLUS_VIP.md)
 - [`docs/CHIP_ID_SOURCE_SHORTLIST.md`](docs/CHIP_ID_SOURCE_SHORTLIST.md)
+- [`CHANGELOG.md`](CHANGELOG.md)
 
 ## Repository Policy
 
