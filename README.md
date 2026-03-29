@@ -18,6 +18,7 @@
   <a href="#feature-overview"><img src="https://img.shields.io/badge/Guide-Feature%20Overview-1D4ED8?style=for-the-badge" alt="Feature Overview"></a>
   <a href="#realme-authentication"><img src="https://img.shields.io/badge/Auth-Realme%20Flow-7C3AED?style=for-the-badge" alt="Realme Authentication"></a>
   <a href="docs/BUILD_STATIC.md"><img src="https://img.shields.io/badge/Docs-Static%20Qt-EF4444?style=for-the-badge" alt="Static Qt Docs"></a>
+  <a href="DISCLAIMER.md"><img src="https://img.shields.io/badge/Notice-Disclaimer-B91C1C?style=for-the-badge" alt="Disclaimer"></a>
   <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Project-Changelog-374151?style=for-the-badge" alt="Changelog"></a>
 </p>
 
@@ -122,6 +123,7 @@ Related note:
 - [`docs/WRITE_PARTITION.md`](docs/WRITE_PARTITION.md)
 - [`docs/BOOT_SLOT.md`](docs/BOOT_SLOT.md)
 - [`docs/CHIP_ID_SOURCE_SHORTLIST.md`](docs/CHIP_ID_SOURCE_SHORTLIST.md)
+- [`DISCLAIMER.md`](DISCLAIMER.md)
 - [`CHANGELOG.md`](CHANGELOG.md)
 
 ## Repository Policy
@@ -145,6 +147,10 @@ SakuraEDL is a low-level service tool. Incorrect flashing, partition writes, or 
 - Use it only on devices you own or are explicitly authorized to service.
 - Verify loader compatibility, storage type, and target partition before writing.
 - Keep backups of critical partitions whenever possible.
+
+Formal disclaimer:
+
+- [`DISCLAIMER.md`](DISCLAIMER.md)
 
 ## Contributing
 

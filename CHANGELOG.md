@@ -11,6 +11,7 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 - MIT license for the public repository
 - Windows GitHub Actions build workflow for the Qt/CMake codebase
 - More polished GitHub-facing README layout with quick links, feature cards, and contributor-facing project guidance
+- Formal repository disclaimer for safety, liability, and authorized-use boundaries
 
 ### Changed
 
